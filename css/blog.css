@@ -204,14 +204,14 @@ a:hover {
     color:#000;
     text-decoration:none;
     display:block;
-    background-image:url(/images/h1.png);
+    background-image:url(/img/h1.png);
     background-position:right;
     background-repeat:no-repeat;
 }
 
 #content h1 a:hover {
     color:#444;
-    background-image:url(/images/h1_hover.png);
+    background-image:url(/img/h1_hover.png);
 }
 
 #content p {
@@ -267,15 +267,15 @@ a:hover {
 
 #content .link-edit a {
     float:right;
-    background-image:url(/images/edit.png);
+    background-image:url(/img/edit.png);
 }
 
 #content .link-comment a {
-    background-image:url(/images/chat.png);
+    background-image:url(/img/chat.png);
 }
 
 #content .link-delete a {
-    background-image:url(/images/delete.png);
+    background-image:url(/img/delete.png);
 }
 
 #content .post-menu a:hover {
@@ -283,15 +283,15 @@ a:hover {
 }
 
 #content .link-comment a:hover {
-    background-image:url(/images/chat-hover.png);
+    background-image:url(/img/chat-hover.png);
 }
 
 #content .link-edit a:hover {
-    background-image:url(/images/edit-hover.png);
+    background-image:url(/img/edit-hover.png);
 }
 
 #content .link-delete a:hover {
-    background-image:url(/images/delete-hover.png);
+    background-image:url(/img/delete-hover.png);
 }
 
 #content p a {
@@ -317,7 +317,7 @@ a:hover {
     margin:10px 0 0 0;
     padding:0 0 5px 15px;
     list-style:none;
-    background-image:url(/images/arrow.png);
+    background-image:url(/img/arrow.png);
     background-position:top left;
     background-repeat:no-repeat;
     color:#999;
@@ -380,7 +380,7 @@ a:hover {
     margin:10px 0 0 0;
     padding:0 0 0px 15px;
     list-style:none;
-    background-image:url(/images/arrow.png);
+    background-image:url(/img/arrow.png);
     background-position:top left;
     background-repeat:no-repeat;
     color:#555;
