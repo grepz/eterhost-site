@@ -4,9 +4,9 @@
 
 (defparameter *blog-posts-per-page* 0)
 
-(defvar *comment-time-format* '((:year 4) #\- (:month 2) #\- (:day 2)
-				#\Space (:hour 2) #\: (:min 2) #\Space
-				:timezone))
+(defvar *date-time-format* '((:year 4) #\- (:month 2) #\- (:day 2)
+			     #\Space (:hour 2) #\: (:min 2) #\Space
+			     :timezone))
 
 (defvar *blog-last-change-timestamp* "2014-06-14")
 (defvar *blog-author*                "Stanislav M. Ivankin")
@@ -128,7 +128,7 @@
 		      nil (local-time:universal-to-timestamp
 			   (get-edit-time comment))
 		      :timezone local-time:+utc-zone+
-		      :format *comment-time-format*)
+		      :format *date-time-format*)
 		     (when admin
 		       (concatenate 'string " (Visible:"
 				    (if (hidden? comment) "no" "yes") ")"))
@@ -156,7 +156,7 @@
 		     (local-time:format-timestring
 		      nil (local-time:universal-to-timestamp
 			   (get-edit-time post))
-		      :format local-time:+rfc-1123-format+)))
+		      :format *date-time-format*)))
 	    ;; If comments parameter is provided and comments are allowed for
 	    ;; the post, generate a link leading to comments section
 	    (when (and comments (comments-allowed? post))

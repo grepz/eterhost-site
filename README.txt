@@ -1,1 +1,5 @@
-This is the stub README.txt for the "eterhost-site" project.
+* EterHost.org site engine.
+
+* TODO:
+- RSS generator
+- Output posts by pages

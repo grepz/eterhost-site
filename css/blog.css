@@ -320,7 +320,7 @@ a:hover {
     background-image:url(/img/arrow.png);
     background-position:top left;
     background-repeat:no-repeat;
-    color:#999;
+    color:#333;
 }
 #content blockquote {
 	background-color:#f6f6f6;
