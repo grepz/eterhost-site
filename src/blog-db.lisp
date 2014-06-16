@@ -132,6 +132,8 @@
 ;; 2. Get new hash
 ;; 3. Compare object hash and new hash
 
+(defmethod blog-db-user/pwcheck ((obj null) hash))
+
 (defmethod blog-db-user/pwcheck ((obj blog-db-user) hash)
   "Check that user entered valid password"
   (let ((upwhash (md5:md5sum-sequence
