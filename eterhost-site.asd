@@ -19,8 +19,10 @@
 ;;	       :cxml-stp
 ;;	       :drakma
 	       )
-  :components ((:file "package")
-	       (:file "blog")
-	       (:file "blog-db")
-	       (:file "blog-web")
-	       (:file "util")))
+  :components ((:module "src"
+			:serial t
+			:components ((:file "package")
+				     (:file "blog")
+				     (:file "blog-db")
+				     (:file "blog-web")
+				     (:file "util")))))
