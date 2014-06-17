@@ -489,8 +489,6 @@
 				*blog-hostname* (blog-db/id-to-str post))
 		   :updated (get-edit-time post))))))
 
-((car (blog-db-get-posts 5)))
-
 (defmethod handle-request :before ((acc acceptor) (req request))
   ;; (hunchentoot:log-message*
   ;;  :info "Addr='~a:~a', Request='~a', Docroot='~a';"

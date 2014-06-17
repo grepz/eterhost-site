@@ -24,7 +24,7 @@
 	    (:link :href ,link :rel "self" :type "application/atom+xml")
 	    (:author (:name ,author-name) (:email ,author-email))
 	    (:id (fmt "~a" (concatenate 'string "urn:uuid:" ,id)))
-	    (:updated ,updated)
+	    (:updated (fmt "~a" ,updated))
 	    ,@body)))
 
 (defmacro atom-xml-entry (summary &key (title "") (entry-link "") (id "")
