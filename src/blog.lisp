@@ -6,7 +6,19 @@
 (defparameter *hunchentoot-ssl-listener* nil)
 (defparameter *hunchentoot-listener*     nil)
 
+(defvar *blog-hostname*  "eterhost.org")
+(defvar *host-atom-uuid* "59FE1880-F62E-11E3-8BDA-C8F7337E6FD0")
+
+(defvar *feed-update-timestamp* "2014-06-18T00:00:00Z")
+(defvar *feed-symbol-cut* 256)
+
+(defvar *blog-last-change-timestamp* "2014-06-14")
+(defvar *blog-author*                "Stanislav M. Ivankin")
+(defvar *blog-author-email*          "lessgrep@gmail.com")
+(defvar *blog-name*                  "EterHost.org")
+
 ;;(setf hunchentoot:*catch-errors-p* t)
+;;(load "/home/grepz/Projects/eterhost-site/src/config.lisp")
 
 (defun blog-start (&key (debug nil) (http-port 80) (https-port 443)
 		     (loglevel :warning) docroot ssl-cert ssl-key ssl-key-passwd

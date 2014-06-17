@@ -15,6 +15,7 @@
 	       :sb-daemon
 	       :swank
 	       :md5
+	       :uuid
 ;;	       :closure-html
 ;;	       :cxml-stp
 ;;	       :drakma
@@ -22,7 +23,9 @@
   :components ((:module "src"
 			:serial t
 			:components ((:file "package")
+				     (:file "util")
+				     (:file "util-web")
 				     (:file "blog")
+				     (:file "blog-feed")
 				     (:file "blog-db")
-				     (:file "blog-web")
-				     (:file "util")))))
+				     (:file "blog-web")))))

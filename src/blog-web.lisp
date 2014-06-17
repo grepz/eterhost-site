@@ -8,24 +8,11 @@
 			     #\Space (:hour 2) #\: (:min 2) #\Space
 			     :timezone))
 
-(defvar *blog-last-change-timestamp* "2014-06-14")
-(defvar *blog-author*                "Stanislav M. Ivankin")
-(defvar *blog-name*                  "EterHost.org")
-
 (defvar *blog-nav-list* '(("/"         "Blog")
 			  ("/projects" "Projects")
 			  ("/archive"  "Archive")
+			  ("/feed"     "Feed")
 			  ("/about"    "About")))
-
-(defmacro with-html ((&key (prologue nil)) &body body)
-  `(with-html-output-to-string
-    (*standard-output* nil :prologue ,prologue :indent t)
-    ,@body))
-
-(defmacro with-authentication (&body body)
-  `(if (null (hunchentoot:session-value :auth))
-       (redirect "/login")
-       (progn ,@body)))
 
 (defun blog-navigation (menu-list separator)
   (with-html ()
@@ -213,17 +200,11 @@
 (define-easy-handler (blog-posts :uri "/") ()
   (blog-page
    (:title "EterHost.org" :name "EterHost.org - Blog")
-   (:div :class "left-column"
+   (:div :class "data-column"
     (:div :id "content"
      (dolist (post (blog-db-get-posts *blog-posts-per-page*))
       (fmt "~a" (htmlize-blog-post post :admin (hunchentoot:session-value :auth)
-     				   :title-link t :comments t)))))
-   (:div :class "right-column"
-    (blog-menu (:name "Info") (:p "Random photos")
-	       ;; TODO: Some random photos?
-	       ;; (:img :src "/images/spathi.png"
-	       ;; 	     :alt= "" :class "padd-bottom")
-	       ))))
+     				   :title-link t :comments t)))))))
 
 (define-easy-handler (post :uri "/post") ()
   (let ((id-param (hunchentoot:get-parameter "id")) doc data id)
@@ -239,7 +220,7 @@
 	  (hunchentoot:session-value :post-id) id)
     (blog-page
 	(:title "EterHost.org" :name "EterHost.org - Blog")
-      (:div :class "left-column"
+      (:div :class "data-column"
 	    (:div :id "content"
 		  (fmt "~a" (htmlize-blog-post data
 				       :admin (hunchentoot:session-value :auth)
@@ -266,13 +247,7 @@
 		      		  (hunchentoot:session-value :auth))
 		      	  (fmt "~a"
 		      	   (blog-post-comment comment
-			    :admin (hunchentoot:session-value :auth))))))))))
-      (:div :class "right-column"
-	    (blog-menu (:name "Info")
-	      (:p "Random photos")
-	      ;; (:img :src "/images/spathi.png" :alt= ""
-	      ;; 	    :class "padd-bottom")
-	      )))))
+			    :admin (hunchentoot:session-value :auth)))))))))))))
 
 (define-easy-handler (comment :uri "/comment") ()
   (let* ((email   (post-parameter "email"))
@@ -500,6 +475,21 @@
    (:title "EterHost.org" :name "EterHost.org - About")
    (:div :id "static-content"
 	 (fmt "~a" (get-text-html (car (blog-db-get-static "about")))))))
+
+(define-easy-handler (feed :uri "/feed") ()
+   (with-atom-xml ("http://eterhost.org/feed/" *feed-update-timestamp*
+		   :title "EterHost.org"
+		   :subtitle "Eterhost blog entries" :id *host-atom-uuid*)
+     (dolist (post (blog-db-get-posts 10))
+       (fmt "~a" (atom-xml-entry
+		     (post-to-feed-content (get-text-html post))
+		   :title (get-title post)
+		   :id (get-feed-uuid post)
+		   :entry-link (blog-post-gen-link
+				*blog-hostname* (blog-db/id-to-str post))
+		   :updated (get-edit-time post))))))
+
+((car (blog-db-get-posts 5)))
 
 (defmethod handle-request :before ((acc acceptor) (req request))
   ;; (hunchentoot:log-message*

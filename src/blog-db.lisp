@@ -192,7 +192,10 @@
 	 :initform '())
    (comments :initarg :comments
 	     :accessor comments-allowed?
-	     :initform t)))
+	     :initform t)
+   (feed-uuid :initarg :feed-uuid
+	      :reader get-feed-uuid
+	      :initform (format nil "~a" (uuid:make-v1-uuid)))))
 
 (defclass blog-db-comment (blog-db-base)
   ((collection :initform *db-comment-collection*)
