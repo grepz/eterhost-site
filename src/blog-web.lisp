@@ -476,12 +476,12 @@
 	 (fmt "~a" (get-text-html (car (blog-db-get-static "about")))))))
 
 (define-easy-handler (feed :uri "/feed") ()
-   (with-atom-xml ("http://eterhost.org/feed/" *feed-update-timestamp*
-		   :title "EterHost.org" :link-alt "http://eterhost.org/"
-		   :subtitle "Eterhost blog entries" :id *host-atom-uuid*)
+   (with-atom-xml ("http://eterhost.org/feed" *feed-update-timestamp*
+		   :title "Grepz Blog" :link-alt "http://eterhost.org"
+		   :subtitle "Grepz's internet hut." :id *host-atom-uuid*)
      (dolist (post (blog-db-get-posts 10))
        (fmt "~a" (atom-xml-entry
-		     (post-to-feed-content (get-text-html post))
+		     (hunchentoot:escape-for-html (get-text-html post))
 		   :title (get-title post)
 		   :id (get-feed-uuid post)
 		   :entry-link (blog-post-gen-link
