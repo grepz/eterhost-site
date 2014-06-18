@@ -17,6 +17,10 @@
 (defvar *blog-author-email*          "lessgrep@gmail.com")
 (defvar *blog-name*                  "EterHost.org")
 
+(defun make-dir (root sub)
+  (merge-pathnames
+   (make-pathname :directory (append (pathname-directory root) (list sub)))))
+
 ;;(setf hunchentoot:*catch-errors-p* t)
 ;;(load "/home/grepz/Projects/eterhost-site/src/config.lisp")
 
@@ -38,6 +42,7 @@
 	 'hunchentoot:easy-acceptor
 	 :port http-port
 	 :document-root docroot
+	 :error-template-directory (make-dir *docroot* "www/errors")
 	 :access-log-destination access-log
 	 :message-log-destination message-log)
 	*hunchentoot-ssl-listener* ;; HTTPS
@@ -48,6 +53,7 @@
 	 :ssl-certificate-file ssl-cert
 	 :ssl-privatekey-file ssl-key
 	 :document-root docroot
+	 :error-template-directory (make-dir *docroot* "www/errors")
 	 :access-log-destination ssl-access-log
 	 :message-log-destination ssl-message-log))
   (blog-db-start)

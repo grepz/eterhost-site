@@ -34,17 +34,15 @@
 		       (:li (fmt "~a / " *blog-name*))
 		       (:li (fmt "~a" *blog-last-change-timestamp*)))
 		      (:ul
-		       (:li :class "small"
-			    (:a :href "127.0.0.1"))
-		       "Author:"
+		       (:li "Author: ")
 		       (:li :class "small"
 			    (:a :href "about" (fmt "~a" *blog-author*)))
 		       (:br)
-		       "Powered by:"
+		       (:li "Powered by: ")
 		       (:li :class "small"
 			    (:a :href "http://en.wikipedia.org/wiki/Common_Lisp"
 				"CL"))
-		       "/ "
+		       (:li " / ")
 		       (:li :class "small"
 			    (:a :href "http://weitz.de/hunchentoot/"
 				"Hunchentoot web server"))))
@@ -143,6 +141,7 @@
 		     (local-time:format-timestring
 		      nil (local-time:universal-to-timestamp
 			   (get-edit-time post))
+		      :timezone local-time:+utc-zone+
 		      :format *date-time-format*)))
 	    ;; If comments parameter is provided and comments are allowed for
 	    ;; the post, generate a link leading to comments section
@@ -478,7 +477,7 @@
 
 (define-easy-handler (feed :uri "/feed") ()
    (with-atom-xml ("http://eterhost.org/feed/" *feed-update-timestamp*
-		   :title "EterHost.org"
+		   :title "EterHost.org" :link-alt "http://eterhost.org/"
 		   :subtitle "Eterhost blog entries" :id *host-atom-uuid*)
      (dolist (post (blog-db-get-posts 10))
        (fmt "~a" (atom-xml-entry
@@ -488,6 +487,15 @@
 		   :entry-link (blog-post-gen-link
 				*blog-hostname* (blog-db/id-to-str post))
 		   :updated (get-edit-time post))))))
+
+;; (defun 404-dispatcher (request)
+;;   '404-page)
+
+;; (defun 404-page ()
+;;   "404 is here!")
+
+;;(setf *dispatch-table* (nconc *dispatch-table* '(404-dispatcher)))
+
 
 (defmethod handle-request :before ((acc acceptor) (req request))
   ;; (hunchentoot:log-message*
