@@ -13,9 +13,6 @@
 	  "[...]")
 	(hunchentoot:escape-for-html html))))
 
-<link rel="alternate" type="text/html"
-      hreflang="en" href="http://example.org/"/>
-
 (defmacro with-atom-xml ((link updated &key (link-alt "") (title "")
 			  (subtitle "") (id "")
 			  (author-name *blog-author*)
