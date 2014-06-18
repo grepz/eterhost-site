@@ -256,6 +256,14 @@
 			      (make-instance 'blog-db-post :mongo-doc x))
 			  documents)))))
 
+(defun blog-db-add-static (link)
+  "Add static data, `link' should be unique"
+  (let ((static (make-instance 'blog-db-data :title link)))
+    (blog-db/generate-doc static)
+    (blog-db/save static)))
+
+;;(blog-db-add-static "about")
+
 (defun blog-db-get-static (title)
   "Get static data by its title"
   (with-blog-db
