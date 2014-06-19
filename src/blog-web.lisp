@@ -121,10 +121,19 @@
 	  (fmt "~a" (blog-db-comment/format comment)))
     (:br)))
 
+(defun blog-post-tags (tags)
+  (with-html ()
+    (:div :class "tag"
+	  (:b "Tags:")
+	  (dolist (tag tags)
+	    (htm
+	     (:a :href (format nil "?tag=~a" tag) (fmt "~a" tag)))))))
+
 (defun htmlize-blog-post (post &key (admin nil) (title-link nil)
 				 (comments nil))
   "Produce blog post html."
-  (let ((id (blog-db/id-to-str post)))
+  (let ((id (blog-db/id-to-str post))
+	(tags (get-tags post)))
     (with-html ()
       (:h1
        ;; If title-link is set, then generate a link leading to a post
@@ -133,7 +142,10 @@
 		    (fmt "~a" (get-title post))))
 	   (fmt "~a" (get-title post))))
       ;; Show post html content
-      (:p (:div :class "post-content"(fmt "~a" (get-text-html post))))
+      (:p (:div :class "post-content" (fmt "~a" (get-text-html post))))
+      (when tags
+	(fmt "~a" (blog-post-tags tags)))
+      (:br)
       ;; Post menu
       (:div :class "post-menu"
 	    ;; edit time goes first
@@ -162,7 +174,8 @@
 	       (:div :class "link-delete"
 		(:a :href
 		 (format nil "/admin/edit-data?type=post&id=~a&act=del" id)
-		 (fmt "Delete")))))))))
+		 (fmt "Delete")))))
+	    ))))
 
 (define-easy-handler (tutorial2-javascript :uri "/eterhost.js") ()
   (setf (content-type*) "text/javascript")
@@ -197,13 +210,16 @@
     ))
 
 (define-easy-handler (blog-posts :uri "/") ()
-  (blog-page
-   (:title "EterHost.org" :name "EterHost.org - Blog")
-   (:div :class "data-column"
-    (:div :id "content"
-     (dolist (post (blog-db-get-posts *blog-posts-per-page*))
-      (fmt "~a" (htmlize-blog-post post :admin (hunchentoot:session-value :auth)
-     				   :title-link t :comments t)))))))
+  (let ((tag (hunchentoot:get-parameter "tag")))
+    (blog-page
+	(:title "EterHost.org" :name "EterHost.org - Blog")
+      (:div :class "data-column"
+       (:div :id "content"
+	(dolist (post (blog-db-get-posts *blog-posts-per-page* tag))
+	 (fmt "~a"
+	      (htmlize-blog-post
+	       post :admin (hunchentoot:session-value :auth)
+	       :title-link t :comments t))))))))
 
 (define-easy-handler (post :uri "/post") ()
   (let ((id-param (hunchentoot:get-parameter "id")) doc data id)
@@ -432,7 +448,14 @@
 			    (:label (:span "Content")
 				    (:textarea :id "content"
 					       :name "content"
-					       (fmt "~a" (get-text-src data))))
+					       (fmt "~a" (get-text-src
+					       data))))
+			    (:label (:span "Tags")
+				    (:input
+				     :id "tags"
+				     :type "text"
+				     :name "tags"
+				     :value (blog-db-post/tags-str data)))
 			    (:input :type :submit :value "Submit")
 			    (:input :type :submit :value "Check")))))
 	    ((string= act-type "del")
@@ -447,10 +470,12 @@
   (with-authentication
     (let ((title (post-parameter "title"))
 	  (text-src (remove #\Linefeed (post-parameter "content")))
+	  (tags (post-parameter "tags"))
 	  (data (hunchentoot:session-value :dataref)))
       (assert data)
       (setf (get-title data)    title
-	    (get-text-src data) text-src)
+	    (get-text-src data) text-src
+	    (get-tags data)     (parse-tags tags))
       ;; Render to html format
       (blog-db-data/render data)
       (blog-db/generate-doc data)

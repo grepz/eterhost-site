@@ -242,6 +242,20 @@ a:hover {
     border: none;
 }
 
+#content .post-content a {
+    color: #333377;
+}
+
+#content .tag b {
+    float:left;
+}
+
+#content .tag a {
+    float:left;
+    margin-right: 10px;
+    padding:0 0 0 10px;
+}
+
 #content .post-menu {
     text-align:right;
     padding: 10px 0px 50px 0px;

@@ -17,6 +17,17 @@ is replaced with replacement."
             when pos do (write-string replacement out)
             while pos)))
 
+(defun split-str (string delim &key (remove-empty t))
+  "Split string by `delim' which is char, remove empty subseqs if
+  `remove-empty' is t"
+  (let ((len (length string)))
+    (loop
+       for i = 0 then (1+ j)
+       for j = (or (position delim string :start i) len)
+       unless (and (= j i) remove-empty)
+       collect  (subseq string i j)
+       while (< j len))))
+
 (defun id-oid-to-str (oid)
   "Formats OID to string."
   (declare ((vector (unsigned-byte 8)) oid)
@@ -84,3 +95,20 @@ is replaced with replacement."
        for y in list2
        for cond = (funcall test x y) while cond
        finally (return cond))))
+
+(defun filter-list (src-lst dst-lst)
+  "Filter for string duplicates in list"
+  (if src-lst
+      (filter-list (remove-if #'(lambda (x)
+				  (string= (car src-lst) x)) src-lst)
+		   (cons (car src-lst) dst-lst))
+      (nreverse  dst-lst)))
+
+(defun list-to-str (lst str)
+  (declare (list lst)
+	   (simple-string str)
+	   (optimize (speed 3) (safety 0)))
+  (if lst
+      (list-to-str1 (cdr lst) (concatenate 'string str "," (car lst)))
+      (when (> (length str) 0)
+	(subseq str 1))))

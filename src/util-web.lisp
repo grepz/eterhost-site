@@ -14,3 +14,11 @@
 
 (defun blog-post-gen-link (host uid)
   (concatenate 'string "http://" host "/post?id=" uid))
+
+(defun parse-tags (input)
+  (mapcar #'(lambda (x)
+	      (string-trim " " x))
+	  (filter-list (split-str input #\,) '())))
+
+(defun tags-list-to-str (tags)
+  (list-to-str tags ""))

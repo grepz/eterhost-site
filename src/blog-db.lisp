@@ -83,7 +83,7 @@
 (defgeneric blog-db/save (blog-db-base))
 
 (defmethod blog-db/save ((obj blog-db-base))
-  "Save blog post to DB if its mongo doc is generated"
+  "Save blog data to DB if its mongo doc is generated"
   (with-blog-db
     (with-slots (db-doc) obj
       (when (and (slot-boundp obj 'db-doc) (slot-value obj 'db-doc))
@@ -197,6 +197,9 @@
 	      :reader get-feed-uuid
 	      :initform (format nil "~a" (uuid:make-v1-uuid)))))
 
+(defmethod blog-db-post/tags-str ((obj blog-db-post))
+  (list-to-str (get-tags obj) ""))
+
 (defclass blog-db-comment (blog-db-base)
   ((collection :initform *db-comment-collection*)
    (author-id :initarg :author
@@ -244,14 +247,17 @@
 	   :accessor post-tag-weight
 	   :initform 0)))
 
-(defun blog-db-get-posts (limit)
+(defun blog-db-get-posts (limit tag)
   "Get `limit' most recent posts from DB"
   (declare (fixnum limit)
+	   (simple-string tag)
 	   (optimize (speed 3) (safety 0)))
   (with-blog-db
       (let ((documents
-	     (docs (db.sort *db-post-collection* :all :asc nil
-			    :field "EDIT-TIME" :limit limit))))
+	     (docs (db.sort *db-post-collection*
+			    (if (= (length tag) 0)
+				:all ($all "TAGS" (list tag)))
+			    :asc nil :field "EDIT-TIME" :limit limit))))
 	(the list (mapcar #'(lambda (x)
 			      (make-instance 'blog-db-post :mongo-doc x))
 			  documents)))))
