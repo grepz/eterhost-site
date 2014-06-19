@@ -127,7 +127,7 @@
 	  (:b "Tags:")
 	  (dolist (tag tags)
 	    (htm
-	     (:a :href (format nil "?tag=~a" tag) (fmt "~a" tag)))))))
+	     (:a :href (format nil "/tag?tag=~a" tag) (fmt "~a" tag)))))))
 
 (defun htmlize-blog-post (post &key (admin nil) (title-link nil)
 				 (comments nil))
@@ -210,12 +210,23 @@
     ))
 
 (define-easy-handler (blog-posts :uri "/") ()
+  (blog-page
+      (:title "EterHost.org" :name "EterHost.org - Blog")
+      (:div :class "data-column"
+       (:div :id "content"
+	(dolist (post (blog-db-get-posts *blog-posts-per-page* ""))
+	 (fmt "~a"
+	      (htmlize-blog-post
+	       post :admin (hunchentoot:session-value :auth)
+	       :title-link t :comments t)))))))
+
+(define-easy-handler (blog-posts-tag :uri "/tag") ()
   (let ((tag (hunchentoot:get-parameter "tag")))
     (blog-page
 	(:title "EterHost.org" :name "EterHost.org - Blog")
       (:div :class "data-column"
        (:div :id "content"
-	(dolist (post (blog-db-get-posts *blog-posts-per-page* tag))
+	(dolist (post (blog-db-get-posts-by-tag *blog-posts-per-page* tag))
 	 (fmt "~a"
 	      (htmlize-blog-post
 	       post :admin (hunchentoot:session-value :auth)

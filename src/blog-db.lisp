@@ -247,20 +247,32 @@
 	   :accessor post-tag-weight
 	   :initform 0)))
 
-(defun blog-db-get-posts (limit tag)
+(defun blog-db-get-posts (limit)
+  "Get `limit' most recent posts from DB"
+  (declare (fixnum limit)
+	   (optimize (speed 3) (safety 0)))
+  (with-blog-db
+      (let ((documents
+	     (docs (db.sort *db-post-collection*
+			    :all :asc nil :field "EDIT-TIME" :limit limit))))
+	(the list (mapcar #'(lambda (x)
+			      (make-instance 'blog-db-post :mongo-doc x))
+			  documents)))))
+
+(defun blog-db-get-posts-by-tag (limit tag)
   "Get `limit' most recent posts from DB"
   (declare (fixnum limit)
 	   (simple-string tag)
 	   (optimize (speed 3) (safety 0)))
   (with-blog-db
-      (let ((documents
-	     (docs (db.sort *db-post-collection*
-			    (if (= (length tag) 0)
-				:all ($all "TAGS" (list tag)))
-			    :asc nil :field "EDIT-TIME" :limit limit))))
-	(the list (mapcar #'(lambda (x)
-			      (make-instance 'blog-db-post :mongo-doc x))
-			  documents)))))
+    (let ((documents
+	   (docs (db.sort *db-post-collection*
+			  (if (= (length tag) 0)
+			      :all ($all "TAGS" (list tag)))
+			  :asc nil :field "EDIT-TIME" :limit limit))))
+      (the list (mapcar #'(lambda (x)
+			    (make-instance 'blog-db-post :mongo-doc x))
+			documents)))))
 
 (defun blog-db-add-static (link)
   "Add static data, `link' should be unique"
@@ -307,21 +319,6 @@
 		   (make-instance 'blog-db-comment :mongo-doc x))
 	       comments))))
 
-;; (defun blog-db-get-comments-num (post-id)
-;;   (declare ((vector (unsigned-byte 8)))
-;; 	   (optimize (speed 3) (safety 0)))
-;;   (with-blog-db
-;;     (let ((comments (docs (db.find *db-comment-collection*
-;; 				   ($ "POST-ID"
-;; 				      (cl-mongo::make-bson-oid :oid post-id))
-;; 				   :limit 0))))
-;;       (length
-;;        (reduce #'(lambda (x y)
-;; 		   (let ((comment (make-instance
-;; 				   'blog-db-comment :mongo-doc y)))
-;; 		     (if (hidden? comment)
-;; 			 x (cons y x)))) comments :initial-value '())))))
-
 (defun blog-db-get-comments-num (post-id)
   (declare ((vector (unsigned-byte 8)))
 	   (optimize (speed 3) (safety 0)))
@@ -338,6 +335,18 @@
 			      x (cons y x)))) comments :initial-value '())))
       (declare (list comments result))
       (the fixnum (length result)))))
+
+#|
+(time
+ (with-blog-db
+   (docs (db.find *db-comment-collection*
+		  ($ "POST-ID"
+		     (cl-mongo::make-bson-oid
+		      :oid (id-str-to-oid "8db3ad73ecb041198467112d")))
+		  :limit 0))))
+
+(time (blog-db-get-comments-num (id-str-to-oid "8db3ad73ecb041198467112d")))
+|#
 
 (defun blog-db-add-comment (comment nick post-id author-id approved)
   (let ((comment (make-instance 'blog-db-comment
