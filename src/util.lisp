@@ -109,6 +109,6 @@ is replaced with replacement."
 	   (simple-string str)
 	   (optimize (speed 3) (safety 0)))
   (if lst
-      (list-to-str1 (cdr lst) (concatenate 'string str "," (car lst)))
+      (list-to-str (cdr lst) (concatenate 'string str "," (car lst)))
       (when (> (length str) 0)
 	(subseq str 1))))
