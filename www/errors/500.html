@@ -1,18 +1,33 @@
 <html>
   <head>
     <title>Internal Server Error</title>
+    <style type="text/css" media="screen">
+      #err-img {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        margin-left: -150px;
+      }
+      #msg {
+        text-align: center;
+      }
+    </style>
   </head>
   <body>
-    <h1>Internal Server Error</h1>
-    An error occurred while processing your ${script-name} request.
+    <h1 id="msg">Internal Server Error</h1>
+    <p id="msg">An error occurred while processing your ${script-name} request.</p>
+<!--
     <hr/>
     <h1>Error Message</h1>
-<pre>${error}</pre>
+    <pre>${error}</pre>
     <h1>Backtrace</h1>
-<pre>${backtrace}</pre>
+    <pre>${backtrace}</pre>
     <hr/>
 <a href="http://weitz.de/hunchentoot">Hunchentoot</a> ${hunchentoot-version} running on ${lisp-implementation-type} ${lisp-implementation-version}
     <hr/>
+-->
+<div id="err-img">
     <img src="/img/made-with-lisp-logo.jpg" width="300" height="100"/>
+</div>
   </body>
 </html>
