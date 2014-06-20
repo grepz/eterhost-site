@@ -91,6 +91,9 @@
 		       :content "text/html;charset=utf-8")
 		(:title ,title)
 		(:script :type "text/javascript" :src "/eterhost.js")
+		(:link :rel "shortcut icon"
+		       :href "/img/favicon.ico"
+		       :type "image/x-icon")
 		(:link :type "text/css"
 		       :rel "stylesheet"
 		       :href "/css/blog.css"))

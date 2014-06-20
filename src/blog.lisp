@@ -32,6 +32,9 @@
   (format t "Starting hunchentoot http:~a, https:~a.~%" http-port https-port)
   (setf hunchentoot:*lisp-errors-log-level*   loglevel
 	hunchentoot:*lisp-warnings-log-level* loglevel
+	;; Use template error pages
+	hunchentoot:*show-lisp-errors-p* t
+	;; In case debug turned off catch errors, dont try to call debugger
 	hunchentoot:*catch-errors-p* (not debug))
   (when (not debug)
     (push (lambda ()
