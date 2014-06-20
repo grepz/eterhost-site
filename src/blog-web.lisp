@@ -89,7 +89,7 @@
 	       (:head
 		(:meta :http-equiv "Content-Type"
 		       :content "text/html;charset=utf-8")
-		(:title ,title)
+		(:title (fmt "~a" ,title))
 		(:script :type "text/javascript" :src "/eterhost.js")
 		(:link :rel "shortcut icon"
 		       :href "/img/favicon.ico"
@@ -226,7 +226,7 @@
 (define-easy-handler (blog-posts-tag :uri "/tag") ()
   (let ((tag (hunchentoot:get-parameter "tag")))
     (blog-page
-	(:title "EterHost.org" :name "EterHost.org - Blog")
+	(:title "EterHost.org - Tag" :name "EterHost.org - Blog")
       (:div :class "data-column"
        (:div :id "content"
 	(dolist (post (blog-db-get-posts-by-tag *blog-posts-per-page* tag))
@@ -248,7 +248,8 @@
     (setf data (make-instance 'blog-db-post :mongo-doc doc)
 	  (hunchentoot:session-value :post-id) id)
     (blog-page
-	(:title "EterHost.org" :name "EterHost.org - Blog")
+	(:title (concatenate 'string "EterHost.org - " (get-title data))
+		:name "EterHost.org - Blog")
       (:div :class "data-column"
 	    (:div :id "content"
 		  (fmt "~a" (htmlize-blog-post data
@@ -351,7 +352,7 @@
 
 (define-easy-handler (admin :uri "/admin") ()
   (with-authentication
-    (blog-page (:title "EterHost.org" :name "EterHost.org - Admin")
+    (blog-page (:title "EterHost.org - Admin" :name "EterHost.org - Admin")
       (:div :id "static-content"
        (:h1 "Edit content")
        (:ul
@@ -361,7 +362,7 @@
 
 (define-easy-handler (admin-edit-comments :uri "/admin/edit-comments") ()
   (with-authentication
-    (blog-page (:title "EterHost.org" :name "EterHost.org - Admin")
+    (blog-page (:title "EterHost.org - Admin" :name "EterHost.org - Admin")
       (:div :id "static-content"
 	    (:form :class "comment-edit-form"
 		   :action "/admin/edit-comments-submit"
@@ -411,7 +412,8 @@
 
 (define-easy-handler (admin-edit-static :uri "/admin/edit-static") ()
   (with-authentication
-    (blog-page (:title "EterHost.org" :name "EterHost.org - Admin - Static")
+    (blog-page (:title "EterHost.org - Static"
+		       :name "EterHost.org - Admin - Static")
       (:div :id "static-content"
        (:ul
 	(dolist (data (blog-db-get-static nil))
@@ -448,7 +450,8 @@
       (cond ((string= act-type "edit")
 	     (setf (hunchentoot:session-value :dataref) data)
 	     ;; Show data edit form
-	     (blog-page (:title "EterHost.org" :name "EterHost.org - Edit")
+	     (blog-page (:title "EterHost.org - Edit data"
+				:name "EterHost.org - Edit")
 	       (:div :id "static-content"
 		     (:form :class "data-edit-form"
 			    :action "/admin/edit-data-submit"
@@ -498,19 +501,19 @@
 
 (define-easy-handler (projects :uri "/projects") ()
   (blog-page
-   (:title "EterHost.org" :name "EterHost.org - Projects")
+   (:title "EterHost.org - Projects" :name "EterHost.org - Projects")
    (:div :id "static-content"
 	 (:h1 "TODO"))))
 
 (define-easy-handler (archive :uri "/archive") ()
   (blog-page
-   (:title "EterHost.org" :name "EterHost.org - Archive")
+   (:title "EterHost.org - Archive" :name "EterHost.org - Archive")
    (:div :id "static-content"
 	 (:h1 "TODO"))))
 
 (define-easy-handler (about :uri "/about") ()
   (blog-page
-   (:title "EterHost.org" :name "EterHost.org - About")
+   (:title "EterHost.org - About" :name "EterHost.org - About")
    (:div :id "static-content"
 	 (fmt "~a" (get-text-html (car (blog-db-get-static "about")))))))
 
