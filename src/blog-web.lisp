@@ -152,7 +152,7 @@
       ;; Post menu
       (:div :class "post-menu"
 	    ;; edit time goes first
-	    (:b (fmt "Posted on ~a"
+	    (:b (fmt "Updated on ~a"
 		     (local-time:format-timestring
 		      nil (local-time:universal-to-timestamp
 			   (get-edit-time post))
@@ -177,8 +177,7 @@
 	       (:div :class "link-delete"
 		(:a :href
 		 (format nil "/admin/edit-data?type=post&id=~a&act=del" id)
-		 (fmt "Delete")))))
-	    ))))
+		 (fmt "Delete")))))))))
 
 (define-easy-handler (tutorial2-javascript :uri "/eterhost.js") ()
   (setf (content-type*) "text/javascript")
@@ -217,7 +216,7 @@
       (:title "EterHost.org" :name "EterHost.org - Blog")
       (:div :class "data-column"
        (:div :id "content"
-	(dolist (post (blog-db-get-posts *blog-posts-per-page* ""))
+	(dolist (post (blog-db-get-posts *blog-posts-per-page*))
 	 (fmt "~a"
 	      (htmlize-blog-post
 	       post :admin (hunchentoot:session-value :auth)
@@ -284,10 +283,11 @@
 	 (nick    (post-parameter "nick"))
 	 (comment (post-parameter "comment"))
 	 (post-id (hunchentoot:session-value :post-id))
+	 (addr    (hunchentoot:remote-addr*))
 	 author)
     (hunchentoot:log-message*
-     :info "Comment. e-mail='~a';nick='~a';comment='~a';Post ID='~a'"
-     email nick comment post-id)
+     :info "Comment. e-mail='~a';nick='~a';comment='~a';Post ID='~a';Addr='~a'"
+     email nick comment post-id addr)
     (if (or (null post-id) (comment-data-invalid? comment email nick))
 	(hunchentoot:log-message* :info "Comment is not valid to be stored.")
 	(progn
@@ -301,7 +301,7 @@
 	   (if (zerop (length nick))
 	       "anonymous"
 	       (hunchentoot:escape-for-html nick))
-	   post-id (blog-db/get-oid author) (approved? author))))
+	   post-id (blog-db/get-oid author) addr (approved? author))))
     (if (null post-id)
 	(redirect "/")
 	(redirect (format nil "/post?id=~a&" (id-oid-to-str post-id))))))
@@ -492,6 +492,7 @@
       (assert data)
       (setf (get-title data)    title
 	    (get-text-src data) text-src
+	    (get-edit-time data) (get-universal-time)
 	    (get-tags data)     (parse-tags tags))
       ;; Render to html format
       (blog-db-data/render data)

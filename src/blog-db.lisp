@@ -175,6 +175,8 @@
 	     :initform "")
    (text-html :accessor get-text-html
 	      :initform "")
+   (create-time :reader get-create-time
+		:initform (get-universal-time))
    (edit-time :accessor get-edit-time
 	      :initform (get-universal-time))))
 
@@ -214,6 +216,9 @@
    (hidden :initarg :hidden
 	   :accessor hidden?
 	   :initform t)
+   (ip :initarg :ip
+       :reader get-ip
+       :initform "")
    (edit-time :reader get-edit-time
 	      :initform (get-universal-time))))
 
@@ -254,7 +259,7 @@
   (with-blog-db
       (let ((documents
 	     (docs (db.sort *db-post-collection*
-			    :all :asc nil :field "EDIT-TIME" :limit limit))))
+			    :all :asc nil :field "CREATE-TIME" :limit limit))))
 	(the list (mapcar #'(lambda (x)
 			      (make-instance 'blog-db-post :mongo-doc x))
 			  documents)))))
@@ -269,7 +274,7 @@
 	   (docs (db.sort *db-post-collection*
 			  (if (= (length tag) 0)
 			      :all ($all "TAGS" (list tag)))
-			  :asc nil :field "EDIT-TIME" :limit limit))))
+			  :asc nil :field "CREATE-TIME" :limit limit))))
       (the list (mapcar #'(lambda (x)
 			    (make-instance 'blog-db-post :mongo-doc x))
 			documents)))))
@@ -348,11 +353,11 @@
 (time (blog-db-get-comments-num (id-str-to-oid "8db3ad73ecb041198467112d")))
 |#
 
-(defun blog-db-add-comment (comment nick post-id author-id approved)
+(defun blog-db-add-comment (comment nick post-id author-id ip approved)
   (let ((comment (make-instance 'blog-db-comment
 				:author (cl-mongo::make-bson-oid :oid author-id)
 				:post (cl-mongo::make-bson-oid :oid post-id)
-				:nick nick :data comment
+				:nick nick :data comment :ip ip
 				:hidden (not approved))))
     (blog-db/generate-doc comment)
     (blog-db/save comment)
@@ -378,3 +383,21 @@
 ;;(describe (blog-db-user-add "user" "password"))
 ;;(setq test (blog-db-get-user "user"))
 ;;(time (blog-db-user/pwcheck test (md5:md5sum-string "password")))
+
+(defun update-fill-create-time ()
+  (dolist (post (blog-db-get-posts 0))
+    (setf (slot-value post 'create-time) (get-edit-time post))
+    (blog-db/generate-doc post)
+    (blog-db/save post)))
+
+
+(defun update-fill-comment-ip (ip)
+  (with-blog-db
+    (let ((documents (docs (db.find *db-comment-collection* :all :limit 0))))
+      (mapcar #'(lambda (x)
+		  (let ((comment (make-instance 'blog-db-comment
+						:mongo-doc x)))
+		    (setf (slot-value comment 'ip) ip)
+		    (blog-db/generate-doc comment)
+		    (blog-db/save comment)))
+	      documents))))
