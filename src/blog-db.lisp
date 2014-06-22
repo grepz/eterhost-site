@@ -341,18 +341,6 @@
       (declare (list comments result))
       (the fixnum (length result)))))
 
-#|
-(time
- (with-blog-db
-   (docs (db.find *db-comment-collection*
-		  ($ "POST-ID"
-		     (cl-mongo::make-bson-oid
-		      :oid (id-str-to-oid "8db3ad73ecb041198467112d")))
-		  :limit 0))))
-
-(time (blog-db-get-comments-num (id-str-to-oid "8db3ad73ecb041198467112d")))
-|#
-
 (defun blog-db-add-comment (comment nick post-id author-id ip approved)
   (let ((comment (make-instance 'blog-db-comment
 				:author (cl-mongo::make-bson-oid :oid author-id)
@@ -367,22 +355,6 @@
   (blog-db-comment-author/author-approved-switch author)
   (blog-db/generate-doc author)
   (blog-db/save author))
-
-;; (let (var)
-;;   (loop for x from 0 to 1000 do
-;;        (sleep 0.1)
-;;        (setf var (make-instance
-;; 		  'blog-db-post
-;; 		  :title (concatenate 'string "Test title " (stringify x))
-;; 		  :text-src "Some text"))
-;;        (blog-db-data/render var)
-;;        (blog-db/generate-doc var)
-;;        (blog-db/save var)))
-
-
-;;(describe (blog-db-user-add "user" "password"))
-;;(setq test (blog-db-get-user "user"))
-;;(time (blog-db-user/pwcheck test (md5:md5sum-string "password")))
 
 (defun update-fill-create-time ()
   (dolist (post (blog-db-get-posts 0))
@@ -401,3 +373,28 @@
 		    (blog-db/generate-doc comment)
 		    (blog-db/save comment)))
 	      documents))))
+
+;; (time
+;;  (with-blog-db
+;;    (docs (db.find *db-comment-collection*
+;; 		  ($ "POST-ID"
+;; 		     (cl-mongo::make-bson-oid
+;; 		      :oid (id-str-to-oid "8db3ad73ecb041198467112d")))
+;; 		  :limit 0))))
+;; (time (blog-db-get-comments-num (id-str-to-oid "8db3ad73ecb041198467112d")))
+
+;; (let (var)
+;;   (loop for x from 0 to 1000 do
+;;        (sleep 0.1)
+;;        (setf var (make-instance
+;; 		  'blog-db-post
+;; 		  :title (concatenate 'string "Test title " (stringify x))
+;; 		  :text-src "Some text"))
+;;        (blog-db-data/render var)
+;;        (blog-db/generate-doc var)
+;;        (blog-db/save var)))
+
+
+;;(describe (blog-db-user-add "user" "password"))
+;;(setq test (blog-db-get-user "user"))
+;;(time (blog-db-user/pwcheck test (md5:md5sum-string "password")))

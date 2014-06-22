@@ -161,6 +161,13 @@
 		 (format nil "/admin/edit-data?type=post&id=~a&act=del" id)
 		 (fmt "Delete")))))))))
 
+function form_preview(form) {
+                form.setAttribute('target', '_blank');
+            }
+            function form_submit(form) {
+                form.removeAttribute('target');
+            }
+
 (define-easy-handler (tutorial2-javascript :uri "/eterhost.js") ()
   (setf (content-type*) "text/javascript")
   (ps
@@ -183,6 +190,10 @@
 	  (alert "Important fields are empty.")
 	  (return-from comment-submit-check false))
 	(return-from comment-submit-check true)))
+    (defun post-preview (form)
+      (form.set-attribute "target" "_blank"))
+    (defun post-submit (form)
+      (form.remove-attribute "target"))
     ;; (defun disqus-fun ()
     ;;   (let ((dsq (document.create-element "script")))
     ;; 	(setf dsq.type "text/javascript"
@@ -330,7 +341,20 @@
        (:ul
 	(:li (:a :href "/admin/edit-data?type=post&act=edit" "New post"))
 	(:li (:a :href "/admin/edit-static" "Edit static"))
-	(:li (:a :href "/admin/edit-comments" "Comments")))))))
+	(:li (:a :href "/admin/edit-comments" "Comments"))
+	(:li (:a :href "/admin/statistic" "Site statistic")))))))
+
+(define-easy-handler (admin-statistic :uri "/admin/statistic") ()
+  (with-authentication
+    (blog-page (:title "EterHost.org - Admin" :name "EterHost.org - Admin")
+      (:div :id "static-content"
+	    (:table
+	     (:tr
+	      (:th "Address")
+	      (:th "Hits"))
+	     (:tr
+	      (:td "127.0.0.1")
+	      (:td "1000")))))))
 
 (define-easy-handler (admin-edit-comments :uri "/admin/edit-comments") ()
   (with-authentication
@@ -448,8 +472,12 @@
 					:name "tags"
 					:value (blog-db-post/tags-str data)))))
 			    (:input :type :submit :name "data_submit"
+				    :onclick (ps
+					       (post-submit this.form))
 				    :value "Submit")
 			    (:input :type :submit :name "data_submit"
+				    :onclick (ps
+					       (post-preview this.form))
 				    :value "Check")))))
 	    ((string= act-type "del")
 	     ;; Delete comments that belong to post
