@@ -1,14 +1,15 @@
 * Comments [2/3]
   - [X] Save IP address of commentator
-  - [X] Edit already existing comment  to have every new field
+  - [X] Already existing comments should have all new fields
   - [ ] Comment deletion
-* Posts [1/2]
+* Posts [2/4]
   - [ ] Preview before submitting post
   - [X] Add create-time, sort posts based on create-time, change edit time if
         post is edited, show edit time on main page
-  - [ ] When editing post, redirect to post instead of /
-* Interface [0/1]
-  - [ ] When in admin mode, show some admin related menu's somewhere
+  - [X] When editing post, redirect to post instead of / or /admin
+  - [ ] Show posts by pages
+* Interface [1/1]
+  - [X] When in admin mode, show some admin related menu's somewhere
 * Feed [0/2]
   - [ ] Update feed update time when new entry is created
   - [ ] Update entry update time when entry is edited

@@ -21,7 +21,10 @@
        (htm
 	(:li (:a :href (car entry)
 		 (fmt "~a" (cadr entry)))
-	     (fmt "~a" separator)))))))
+	     (fmt "~a" separator))))
+     (when (hunchentoot:session-value :auth)
+       (htm
+	(:li (:a :href "/admin" "Admin")))))))
 
 (defun blog-footer ()
   "Footer for the site page"
@@ -58,27 +61,6 @@
 		 (fmt "~a" name)
 		 (:div :class "navigation"
 		       (fmt "~a" (blog-navigation *blog-nav-list* " "))))))))
-
-(defmacro blog-menu ((&key name) &body body)
-  `(htm
-    (:div :id "menu"
-	  (:h1 ,name)
-	  (:h3 "Blog menu")
-	  (:ul
-	   (when (hunchentoot:session-value :auth)
-	     (htm (:li (:a :href "/logout" "Logout"))))
-	   (:li (:a :href "/admin" "Admin")))
-	  (:h3 "Blog updates")
-	  (:p "Recent posts:")
-	  (:ul
-	   (loop for post in (blog-db-get-posts 5) do
-		(htm
-		 (:li
-		  (:a :href
-		      (str (format nil "/post?id=~a"
-				   (blog-db/id-to-str post)))
-		      (str (get-title post)))))))
-	  ,@body)))
 
 (defmacro blog-page ((&key title name) &body body)
   "Generic blog web page macro."
@@ -467,14 +449,18 @@
 					       :name "content"
 					       (fmt "~a" (get-text-src
 					       data))))
-			    (:label (:span "Tags")
-				    (:input
-				     :id "tags"
-				     :type "text"
-				     :name "tags"
-				     :value (blog-db-post/tags-str data)))
-			    (:input :type :submit :value "Submit")
-			    (:input :type :submit :value "Check")))))
+			    (when (string= data-type "post")
+			      (htm
+			       (:label (:span "Tags")
+				       (:input
+					:id "tags"
+					:type "text"
+					:name "tags"
+					:value (blog-db-post/tags-str data)))))
+			    (:input :type :submit :name "data_submit"
+				    :value "Submit")
+			    (:input :type :submit :name "data_submit"
+				    :value "Check")))))
 	    ((string= act-type "del")
 	     ;; Delete comments that belong to post
 	     (dolist (comment (blog-db-get-comments :post-id id))
@@ -488,17 +474,20 @@
     (let ((title (post-parameter "title"))
 	  (text-src (remove #\Linefeed (post-parameter "content")))
 	  (tags (post-parameter "tags"))
+	  (action (hunchentoot:get-parameter "data_submit"))
 	  (data (hunchentoot:session-value :dataref)))
       (assert data)
-      (setf (get-title data)    title
-	    (get-text-src data) text-src
-	    (get-edit-time data) (get-universal-time)
-	    (get-tags data)     (parse-tags tags))
+      (setf (get-title data)     title
+	    (get-text-src data)  text-src
+	    (get-edit-time data) (get-universal-time))
+      (when (/= (length tags) 0)
+	(setf (get-tags data) (parse-tags tags)))
       ;; Render to html format
       (blog-db-data/render data)
       (blog-db/generate-doc data)
       (blog-db/save data)
-      (redirect "/admin"))))
+      (redirect (format nil "/post?id=~a&"
+			(id-oid-to-str (blog-db/get-oid data)))))))
 
 (define-easy-handler (projects :uri "/projects") ()
   (blog-page
