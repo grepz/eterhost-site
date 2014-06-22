@@ -226,8 +226,7 @@
     ;; If no doc found, return to the root
     (when (null doc)
       (redirect "/"))
-    (setf data (make-instance 'blog-db-post :mongo-doc doc)
-	  (hunchentoot:session-value :post-id) id)
+    (setf data (make-instance 'blog-db-post :mongo-doc doc))
     (blog-page
 	(:title (concatenate 'string "EterHost.org - " (get-title data))
 		:name "EterHost.org - Blog")
@@ -250,7 +249,9 @@
 			    (:br)
 			    (:label (:span "Comment")
 				    (:textarea :id "content" :name "comment"))
-			    (:input :type :submit :value "Submit"))
+			    (:input :type :submit :value "Submit")
+			    (:input :type :hidden :id "content"
+				    :value id-param :name "comment_post_id"))
 		     (:h2 "Comments:")
 		     (:div :id "comments" (:a :name "comments")
 		      (dolist (comment (blog-db-get-comments :post-id id))
@@ -264,29 +265,18 @@
   (let* ((email   (post-parameter "email"))
 	 (nick    (post-parameter "nick"))
 	 (comment (post-parameter "comment"))
-	 (post-id (hunchentoot:session-value :post-id))
+	 (post-id (post-parameter "comment_post_id"))
 	 (addr    (hunchentoot:remote-addr*))
 	 author)
-    (hunchentoot:log-message*
-     :info "Comment. e-mail='~a';nick='~a';comment='~a';Post ID='~a';Addr='~a'"
-     email nick comment post-id addr)
-    (if (or (null post-id) (comment-data-invalid? comment email nick))
-	(hunchentoot:log-message* :info "Comment is not valid to be stored.")
-	(progn
-	  (hunchentoot:log-message* :info "Saving comment in DB.")
-	  (setf author (or (car (blog-db-get-comment-author email))
-			   (blog-db-add-comment-author email)))
-	  (hunchentoot:log-message* :info "Author ID=<~a>, Post ID=<~a>"
-				    (blog-db/get-oid author) post-id)
-	  (blog-db-add-comment
-	   (hunchentoot:escape-for-html comment)
-	   (if (zerop (length nick))
-	       "anonymous"
-	       (hunchentoot:escape-for-html nick))
-	   post-id (blog-db/get-oid author) addr (approved? author))))
-    (if (null post-id)
-	(redirect "/")
-	(redirect (format nil "/post?id=~a&" (id-oid-to-str post-id))))))
+    (assert (or (string/=  post-id "")
+		(not (comment-data-invalid? comment email nick))))
+    (setf author (or (car (blog-db-get-comment-author email))
+		     (blog-db-add-comment-author email)))
+    (blog-db-add-comment
+     (hunchentoot:escape-for-html comment)
+     (if (zerop (length nick)) "anonymous" (hunchentoot:escape-for-html nick))
+     (id-str-to-oid post-id) (blog-db/get-oid author) addr (approved? author))
+    (redirect (format nil "/post?id=~a&" post-id))))
 
 (define-easy-handler (login :uri "/login" :default-request-type :post)
     ((username :parameter-type 'string)
