@@ -90,21 +90,28 @@
   "Print comment html data."
   (with-html ()
     (:div :id "comment-box"
-	  (:p (:h4
-	       (fmt "~a"
-		    (concatenate
-		     'string "By \"" (comment-nick comment) "\" on "
-		     (local-time:format-timestring
-		      nil (local-time:universal-to-timestamp
-			   (get-edit-time comment))
-		      :timezone local-time:+utc-zone+
-		      :format *date-time-format*)
-		     (when admin
-		       (concatenate 'string " (Visible:"
-				    (if (hidden? comment) "no" "yes") ")"))
-		     ":"))))
-	  (fmt "~a" (blog-db-comment/format comment)))
-    (:br)))
+	  (:div :class "comment-head"
+		(:h4
+		 (fmt "~a"
+		      (concatenate
+		       'string "By \"" (comment-nick comment) "\" on "
+		       (local-time:format-timestring
+			nil (local-time:universal-to-timestamp
+			     (get-edit-time comment))
+			:timezone local-time:+utc-zone+
+			:format *date-time-format*))))
+		(when admin
+		  (htm
+		   (:h4
+		    (concatenate 'string " (Visible:"
+				 (if (hidden? comment) "no" "yes") ")"))
+		   (:a :href
+		       (format
+			nil "/admin/edit-data?type=comment&id=~a&act=del"
+			(blog-db/id-to-str comment))
+		       "Delete"))))
+	  (fmt "~a" (blog-db-comment/format comment))
+    (:br))))
 
 (defun blog-post-tags (tags)
   (with-html ()
@@ -160,13 +167,6 @@
 		(:a :href
 		 (format nil "/admin/edit-data?type=post&id=~a&act=del" id)
 		 (fmt "Delete")))))))))
-
-function form_preview(form) {
-                form.setAttribute('target', '_blank');
-            }
-            function form_submit(form) {
-                form.removeAttribute('target');
-            }
 
 (define-easy-handler (tutorial2-javascript :uri "/eterhost.js") ()
   (setf (content-type*) "text/javascript")
@@ -425,7 +425,7 @@ function form_preview(form) {
   (with-authentication
     (let* ((id-param  (hunchentoot:get-parameter "id"))   ;; OID
 	   (act-type  (hunchentoot:get-parameter "act"))  ;; edit/delete
-	   (data-type (hunchentoot:get-parameter "type")) ;; static/post
+	   (data-type (hunchentoot:get-parameter "type")) ;; static/post/comment
 	   data id)
       ;; Check parameters
       (when (or (null data-type) (null act-type))
@@ -440,6 +440,9 @@ function form_preview(form) {
 		  ((string= data-type "static")
 		   (make-instance 'blog-db-data :mongo-doc
 				  (doc-find-by-oid *db-static-collection* id)))
+		  ((string= data-type "comment")
+		   (make-instance 'blog-db-comment :mongo-doc
+				  (doc-find-by-oid *db-comment-collection* id)))
 		  (t nil)))
       (when (null data)
 	(redirect "/"))
@@ -481,9 +484,10 @@ function form_preview(form) {
 				    :value "Check")))))
 	    ((string= act-type "del")
 	     ;; Delete comments that belong to post
-	     (dolist (comment (blog-db-get-comments :post-id id))
-	        (blog-db/delete comment))
 	     ;; Delete post
+	     (when (string= data-type "post")
+	       (dolist (comment (blog-db-get-comments :post-id id))
+		 (blog-db/delete comment)))
 	     (blog-db/delete data)
 	     (redirect "/"))))))
 

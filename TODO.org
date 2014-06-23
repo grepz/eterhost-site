@@ -10,8 +10,9 @@
   - [X] When editing post, redirect to post instead of / or /admin
   - [ ] Show posts by pages
   - [ ] Semantic urls instead of OID's
-* Interface [1/1]
+* Interface [1/2]
   - [X] When in admin mode, show some admin related menu's somewhere
+  - [ ] Ask for confirmation when deleting posts/comments
 * Feed [0/2]
   - [ ] Update feed update time when new entry is created
   - [ ] Update entry update time when entry is edited
