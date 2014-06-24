@@ -39,8 +39,8 @@
 		      (:ul
 		       (:li "Author: ")
 		       (:li :class "small"
-			    (:a :href "about" (fmt "~a" *blog-author*)))
-		       (:br)
+			    (:a :href "about" (fmt "~a" *blog-author*))))
+		      (:ul
 		       (:li "Powered by: ")
 		       (:li :class "small"
 			    (:a :href "http://en.wikipedia.org/wiki/Common_Lisp"
@@ -57,10 +57,9 @@
   (with-html ()
     (:div :class "header"
 	  (:div :class "logo"
-		(:h1
-		 (fmt "~a" name)
-		 (:div :class "navigation"
-		       (fmt "~a" (blog-navigation *blog-nav-list* " "))))))))
+		(:h1 (fmt "~a" name))
+		(:div :class "navigation"
+		      (fmt "~a" (blog-navigation *blog-nav-list* " ")))))))
 
 (defmacro blog-page ((&key title name) &body body)
   "Generic blog web page macro."
@@ -106,9 +105,10 @@
 		    (concatenate 'string " (Visible:"
 				 (if (hidden? comment) "no" "yes") ")"))
 		   (:a :href
-		       (format
-			nil "/admin/edit-data?type=comment&id=~a&act=del"
-			(blog-db/id-to-str comment))
+		       (cl-who:escape-string
+			(format
+			 nil "/admin/edit-data?type=comment&id=~a&act=del"
+			 (blog-db/id-to-str comment)))
 		       "Delete"))))
 	  (fmt "~a" (blog-db-comment/format comment))
     (:br))))
@@ -134,7 +134,8 @@
 		    (fmt "~a" (get-title post))))
 	   (fmt "~a" (get-title post))))
       ;; Show post html content
-      (:p (:div :class "post-content" (fmt "~a" (get-text-html post))))
+      (:div :class "post-content"
+	    (fmt "~a" (get-text-html post)))
       (when tags
 	(fmt "~a" (blog-post-tags tags)))
       (:br)
@@ -161,12 +162,15 @@
 	      (htm
 	       (:div :class "link-edit"
 		(:a :href
-		 (format nil "/admin/edit-data?type=post&id=~a&act=edit" id)
+		 (cl-who:escape-string
+		  (format nil "/admin/edit-data?type=post&id=~a&act=edit" id))
 		 (fmt "Edit")))
 	       (:div :class "link-delete"
 		(:a :href
-		 (format nil "/admin/edit-data?type=post&id=~a&act=del" id)
+		 (cl-who:escape-string
+		  (format nil "/admin/edit-data?type=post&id=~a&act=del" id))
 		 (fmt "Delete")))))))))
+
 
 (define-easy-handler (tutorial2-javascript :uri "/eterhost.js") ()
   (setf (content-type*) "text/javascript")
@@ -250,7 +254,7 @@
 		    (htm
 		     (:h2 "Leave comment:")
 		     (:form :class "comment-form" :action "/comment"
-			    :name "fcomment"
+			    :id "fcomment"
 			    :onsubmit (ps (comment-submit-check))
 			    :method :post
 			    (:label (:span "Email:")
@@ -287,7 +291,7 @@
      (hunchentoot:escape-for-html comment)
      (if (zerop (length nick)) "anonymous" (hunchentoot:escape-for-html nick))
      (id-str-to-oid post-id) (blog-db/get-oid author) addr (approved? author))
-    (redirect (format nil "/post?id=~a&" post-id))))
+    (redirect (format nil "/post?id=~a" post-id))))
 
 (define-easy-handler (login :uri "/login" :default-request-type :post)
     ((username :parameter-type 'string)
@@ -339,10 +343,11 @@
       (:div :id "static-content"
        (:h1 "Edit content")
        (:ul
-	(:li (:a :href "/admin/edit-data?type=post&act=edit" "New post"))
-	(:li (:a :href "/admin/edit-static" "Edit static"))
+	(:li (:a :href (cl-who:escape-string
+			"/admin/edit-data?type=post&act=edit") "New post"))
+	(:li (:a :href "/admin/edit-static"   "Edit static"))
 	(:li (:a :href "/admin/edit-comments" "Comments"))
-	(:li (:a :href "/admin/statistic" "Site statistic")))))))
+	(:li (:a :href "/admin/statistic"     "Site statistic")))))))
 
 (define-easy-handler (admin-statistic :uri "/admin/statistic") ()
   (with-authentication
@@ -415,8 +420,9 @@
 	(dolist (data (blog-db-get-static nil))
 	  (htm
 	   (:li
-	    (:a :href (format nil "/admin/edit-data?id=~a&act=edit&type=static"
-			      (blog-db/id-to-str data))
+	    (:a :href (cl-who:escape-string
+		       (format nil "/admin/edit-data?id=~a&act=edit&type=static"
+			       (blog-db/id-to-str data)))
 		(fmt "~a" (get-title data)))))))
        (:br)
        (:a :href "/admin" "Return")))))
@@ -508,7 +514,7 @@
       (blog-db-data/render data)
       (blog-db/generate-doc data)
       (blog-db/save data)
-      (redirect (format nil "/post?id=~a&"
+      (redirect (format nil "/post?id=~a"
 			(id-oid-to-str (blog-db/get-oid data)))))))
 
 (define-easy-handler (projects :uri "/projects") ()
