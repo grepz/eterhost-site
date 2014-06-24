@@ -265,15 +265,19 @@
 		 :reader get-comments-num
 		 :initform 0)))
 
-(defgeneric blog-db-info-update (obj))
+(defgeneric blog-db-info-update (obj &rest junk))
 
-(defmethod blog-db-info-update ((obj blog-db-info))
+(defmethod blog-db-info-update ((obj blog-db-info)
+				&key (posts nil) (comments nil) (update t))
   (with-slots (posts-num comments-num feed-update-time) obj
-    (setf comments-num (blog-db-count *db-comment-collection*)
-	  posts-num (blog-db-count *db-post-collection*)
-	  feed-update-time (get-universal-time))
-    (blog-db/generate-doc obj)
-    (blog-db/save obj)))
+    (when posts
+      (setf posts-num (blog-db-count *db-post-collection*)))
+    (when comments
+      (setf comments-num (blog-db-count *db-comment-collection*)))
+    (when (and update (or posts comments))
+      (setf feed-update-time (get-universal-time))
+      (blog-db/generate-doc obj)
+      (blog-db/save obj))))
 
 (defun blog-db-info-create-new (&key (old-uuid t) (old-update-time nil))
   (let* ((recent-info (blog-db-info-get-recent))

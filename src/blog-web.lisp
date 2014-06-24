@@ -293,6 +293,8 @@
      (hunchentoot:escape-for-html comment)
      (if (zerop (length nick)) "anonymous" (hunchentoot:escape-for-html nick))
      (id-str-to-oid post-id) (blog-db/get-oid author) addr (approved? author))
+    ;; Update blog info information without updating feed `updated' tag
+    (blog-db-info-update (blog-db-info-get-recent) :comments t :update nil)
     (redirect (format nil "/post?id=~a" post-id))))
 
 (define-easy-handler (login :uri "/login" :default-request-type :post)
@@ -516,8 +518,8 @@
       (blog-db-data/render data)
       (blog-db/generate-doc data)
       (blog-db/save data)
-      ;; Update feed
-      (blog-db-info-update (blog-db-info-get-recent))
+      ;; Update blog info + update feed `updated' tag
+      (blog-db-info-update (blog-db-info-get-recent) :posts t)
       (redirect (format nil "/post?id=~a"
 			(id-oid-to-str (blog-db/get-oid data)))))))
 
