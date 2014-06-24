@@ -7,9 +7,7 @@
 (defparameter *hunchentoot-listener*     nil)
 
 (defvar *blog-hostname*  "eterhost.org")
-(defvar *host-atom-uuid* "59FE1880-F62E-11E3-8BDA-C8F7337E6FD0")
 
-(defvar *feed-update-timestamp* "2014-06-20T00:00:00Z")
 (defvar *feed-symbol-cut* 256)
 
 (defvar *blog-last-change-timestamp* "2014-06-14")

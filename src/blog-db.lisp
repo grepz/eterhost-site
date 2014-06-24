@@ -22,6 +22,7 @@
 (defvar *db-comment-collection*        "comments")
 (defvar *db-comment-author-collection* "authors")
 (defvar *db-post-tag-collection*       "tags")
+(defvar *db-blog-info-collection*      "blog-info")
 
 ;; Makes it possible to use mongo connections in multithreaded environment
 (defmacro with-blog-db (&body body)
@@ -39,6 +40,10 @@
 (defun blog-db-stop ()
   "Stop mongo DB connection"
   (mongo-close :blog-db))
+
+(defun blog-db-count (collection)
+  (with-blog-db
+    (get-element "n" (car (docs (db.count collection :all))))))
 
 (defclass blog-db-base ()
   ((db-doc :reader db-doc)
@@ -68,8 +73,7 @@
 (defmethod print-object ((obj blog-db-base) stream)
   (with-slots (collection) obj
     (format stream
-     "~a(~a), OID=~a~%"
-     (type-of obj) (slot-value obj 'collection)
+     "~a(~a), OID=~a~%" (type-of obj) collection
      (if (blog-db/have-doc obj) (blog-db/id-to-str obj) "None"))))
 
 (defgeneric blog-db/delete (blog-db-base))
@@ -85,9 +89,8 @@
 (defmethod blog-db/save ((obj blog-db-base))
   "Save blog data to DB if its mongo doc is generated"
   (with-blog-db
-    (with-slots (db-doc) obj
-      (when (and (slot-boundp obj 'db-doc) (slot-value obj 'db-doc))
-	(db.save (db-collection obj) db-doc)))))
+    (when (and (slot-boundp obj 'db-doc) (slot-value obj 'db-doc))
+      (db.save (db-collection obj) (slot-value obj 'db-doc)))))
 
 (defgeneric blog-db/have-doc (blog-db-base))
 
@@ -243,6 +246,57 @@
     ((obj blog-db-comment-author))
   "Switch approved state for comment author"
   (setf (approved? obj) (not (approved? obj))))
+
+(defclass blog-db-info (blog-db-base)
+  ((collection :initform *db-blog-info-collection*)
+   (feed-root-uuid :initarg :feed-root-uuid
+		   :reader get-feed-root-uuid
+		   :initform (format nil "~a" (uuid:make-v1-uuid)))
+   (feed-update-time :initarg :feed-update-time
+		     :reader get-feed-update-time
+		     :initform (get-universal-time))
+   (timestamp :initarg :timestamp
+	      :reader get-timestamp
+	      :initform (get-universal-time))
+   (posts-num :initarg :posts-num
+	      :reader get-posts-num
+	      :initform 0)
+   (comments-num :initarg :comments-num
+		 :reader get-comments-num
+		 :initform 0)))
+
+(defgeneric blog-db-info-update (obj))
+
+(defmethod blog-db-info-update ((obj blog-db-info))
+  (with-slots (posts-num comments-num feed-update-time) obj
+    (setf comments-num (blog-db-count *db-comment-collection*)
+	  posts-num (blog-db-count *db-post-collection*)
+	  feed-update-time (get-universal-time))
+    (blog-db/generate-doc obj)
+    (blog-db/save obj)))
+
+(defun blog-db-info-create-new (&key (old-uuid t) (old-update-time nil))
+  (let* ((recent-info (blog-db-info-get-recent))
+	 (comments (blog-db-count *db-comment-collection*))
+	 (posts (blog-db-count *db-post-collection*))
+	 (info (make-instance 'blog-db-info
+			      :posts-num posts :comments-num comments)))
+    (when old-uuid
+      (setf (slot-value info 'feed-root-uuid)
+	    (get-feed-root-uuid recent-info)))
+    (when old-update-time
+      (setf (slot-value info 'feed-update-time)
+	    (get-feed-update-time recent-info)))
+    (blog-db/generate-doc info)
+    (blog-db/save info)))
+
+(defun blog-db-info-get-recent ()
+  (with-blog-db
+    (let ((document
+	   (docs (db.sort *db-blog-info-collection*
+			  :all :asc nil :field "TIMESTAMP" :limit 1))))
+      (when document
+	(make-instance 'blog-db-info :mongo-doc (car document))))))
 
 (defclass blog-db-post-tag (blog-db-base)
   ((collection :initform *db-post-tag-collection*)

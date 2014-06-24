@@ -7,6 +7,8 @@
 (defvar *date-time-format* '((:year 4) #\- (:month 2) #\- (:day 2)
 			     #\Space (:hour 2) #\: (:min 2) #\Space
 			     :timezone))
+(defvar *feed-time-format* '((:year 4) #\- (:month 2) #\- (:day 2)
+			     #\T (:hour 2) #\: (:min 2) #\: (:sec 2) #\Z))
 
 (defvar *blog-nav-list* '(("/"         "Blog")
 			  ("/projects" "Projects")
@@ -514,6 +516,8 @@
       (blog-db-data/render data)
       (blog-db/generate-doc data)
       (blog-db/save data)
+      ;; Update feed
+      (blog-db-info-update (blog-db-info-get-recent))
       (redirect (format nil "/post?id=~a"
 			(id-oid-to-str (blog-db/get-oid data)))))))
 
@@ -536,17 +540,25 @@
 	 (fmt "~a" (get-text-html (car (blog-db-get-static "about")))))))
 
 (define-easy-handler (feed :uri "/feed") ()
-   (with-atom-xml ("http://eterhost.org/feed" *feed-update-timestamp*
-		   :title "Grepz Blog" :link-alt "http://eterhost.org"
-		   :subtitle "Grepz's internet hut." :id *host-atom-uuid*)
-     (dolist (post (blog-db-get-posts 10))
-       (fmt "~a" (atom-xml-entry
+  (let ((info (blog-db-info-get-recent)))
+    (when info
+      (with-atom-xml ("http://eterhost.org/feed"
+		      (local-time:format-timestring
+		       nil (local-time:universal-to-timestamp
+			    (get-feed-update-time (blog-db-info-get-recent)))
+		       :timezone local-time:+utc-zone+
+		       :format *feed-time-format*)
+		     :title "Grepz Blog" :link-alt "http://eterhost.org"
+		     :subtitle "Grepz's internet hut."
+		     :id (get-feed-root-uuid info))
+	(dolist (post (blog-db-get-posts 10))
+	  (fmt "~a" (atom-xml-entry
 		     (hunchentoot:escape-for-html (get-text-html post))
-		   :title (get-title post)
-		   :id (get-feed-uuid post)
-		   :entry-link (blog-post-gen-link
-				*blog-hostname* (blog-db/id-to-str post))
-		   :updated (get-edit-time post))))))
+		     :title (get-title post)
+		     :id (get-feed-uuid post)
+		     :entry-link (blog-post-gen-link
+				  *blog-hostname* (blog-db/id-to-str post))
+		     :updated (get-edit-time post))))))))
 
 ;; (defun 404-dispatcher (request)
 ;;   '404-page)

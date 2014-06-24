@@ -38,8 +38,8 @@
 		 (hunchentoot-log-hash-entry-what value)))
      finally (return x)))
 
-;; (multiple-value-bind (tbl inv inv-str)
-;;     (hunchentoot-log-get-hash "~/tmp/ssl-access.log")
-;;   (format t "Invalid entries=~a; Total number of unique visitors=~a~%"
-;; 	  inv (hunchentoot-log-simple-parse tbl))
-;;   (format t "Invalid strings: ~a~%" inv-str))
+(multiple-value-bind (tbl inv inv-str)
+    (hunchentoot-log-get-hash "~/tmp/ssl-access.log")
+  (format t "Invalid entries=~a; Total number of unique visitors=~a~%"
+	  inv (hunchentoot-log-simple-parse tbl))
+  (format t "Invalid strings: ~a~%" inv-str))
