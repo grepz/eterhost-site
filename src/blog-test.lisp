@@ -39,14 +39,6 @@
 ;;  (thread-pool:start-pool *pool*)
   )
 
-(let ((out *standard-output*))
-	   (defun do-req (x)
-	     (if (not (blog-check-request))
-		(format out "------------> Error!~%")
-		(format out "------------> Ok.~%"))
-	     (format out "Thread ~a complete.~%" x)
-	     (sleep (random 5))))
-
 (defun test ()
   (blog-db-get-posts 100))
 
@@ -80,3 +72,11 @@
        0 20 0 0 0 16 69 68 73 84 45 84 73 77 69 0 255 255 255 255 0 0)
 
 (cl-mongo::bson-decode)
+
+(let ((out *standard-output*))
+  (defun do-req (x)
+    (if (not (blog-check-request))
+	(format out "------------> Error!~%")
+	(format out "------------> Ok.~%"))
+    (format out "Thread ~a complete.~%" x)
+    (sleep (random 5))))

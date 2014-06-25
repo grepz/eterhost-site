@@ -35,7 +35,10 @@
 (defun blog-db-start ()
   "Start mongo DB connection"
   (mongo :name :blog-db :host *blog-mongo-db-host* :port *blog-mongo-db-port*
-	 :db *blog-mongo-db*))
+	 :db *blog-mongo-db*)
+  ;; If theres no info entry in DB, create new one
+  (unless (blog-db-info-get-recent)
+    (blog-db-info-create-new :old-uuid nil)))
 
 (defun blog-db-stop ()
   "Stop mongo DB connection"
@@ -247,6 +250,23 @@
   "Switch approved state for comment author"
   (setf (approved? obj) (not (approved? obj))))
 
+(defclass blog-db-log-report (blog-db-base)
+  ((start-time :initarg :start-time)
+   (end-time :initarg :end-time)
+   (gen-time :initarg :gen-time)
+   (hits :initarg :total-hits)
+   (dsize :initarg :download-size)
+   (usize :initarg :upload-size)))
+
+(defclass blog-db-log-entry (blog-db-base)
+  ((report-id :initarg :report-id)
+   (address :initarg :address)
+   (user-agent :initarg :user-agent)
+   (url :initarg :url)
+   (http-code :initarg :http-code)
+   (size :initarg :size)
+   (timestamp :initarg :timestamp)))
+
 (defclass blog-db-info (blog-db-base)
   ((collection :initform *db-blog-info-collection*)
    (feed-root-uuid :initarg :feed-root-uuid
@@ -283,8 +303,8 @@
   (let* ((recent-info (blog-db-info-get-recent))
 	 (comments (blog-db-count *db-comment-collection*))
 	 (posts (blog-db-count *db-post-collection*))
-	 (info (make-instance 'blog-db-info
-			      :posts-num posts :comments-num comments)))
+	 (info (make-instance 'blog-db-info :posts-num posts
+			      :comments-num comments)))
     (when old-uuid
       (setf (slot-value info 'feed-root-uuid)
 	    (get-feed-root-uuid recent-info)))

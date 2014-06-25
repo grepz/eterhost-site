@@ -4,9 +4,10 @@
 
 (defparameter *blog-posts-per-page* 0)
 
-(defvar *date-time-format* '((:year 4) #\- (:month 2) #\- (:day 2)
-			     #\Space (:hour 2) #\: (:min 2) #\Space
-			     :timezone))
+;; Posts/comments date format
+(defvar *date-time-format* '((:year 4) #\- (:month 2) #\- (:day 2) #\Space
+			     (:hour 2) #\: (:min 2) #\Space :timezone))
+;; Atom feed `updated' tag format
 (defvar *feed-time-format* '((:year 4) #\- (:month 2) #\- (:day 2)
 			     #\T (:hour 2) #\: (:min 2) #\: (:sec 2) #\Z))
 
