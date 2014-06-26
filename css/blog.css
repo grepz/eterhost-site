@@ -424,6 +424,7 @@ a:hover {
 #static-content td {
     font-size: 1em;
     border: 1px solid black;
+    background-color: #AAD;
     padding: 3px 7px 2px 7px;
 }
 

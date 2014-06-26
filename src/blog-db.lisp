@@ -347,15 +347,12 @@
        (blog-db/save obj)))
 
 (defmacro with-blog-db-log-entries ((var report-id) &body body)
-  (let ())
   `(with-blog-db
      (loop for doc in
 	  (docs (iter (db.find *db-log-entry-collection*
 			       ($ "REPORT-ID" (cl-mongo::make-bson-oid
 					       :oid ,report-id)) :limit 0)))
 	for ,var = (make-instance 'blog-db-log-entry :mongo-doc doc) do
-	  (describe doc)
-	  (describe ,var)
 	  ,@body)))
 
 (defclass blog-db-info (blog-db-base)
