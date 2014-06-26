@@ -108,6 +108,9 @@
   (when (blog-db/have-doc obj)
     (doc-id (slot-value obj 'db-doc))))
 
+(defmethod blog-db/get-bson-oid ((obj blog-db-base))
+  (cl-mongo::make-bson-oid :oid (blog-db/get-oid obj)))
+
 (defun doc-find-by-oid (collection oid)
   "Find mongo doc in `collection' using its OID"
   (with-blog-db
@@ -262,13 +265,13 @@
 	     :reader get-gen-time
 	     :initform (get-universal-time))
    (hits :initarg :total-hits
-	 :reader get-total-hits
+	 :accessor get-total-hits
 	 :initform 0)
    (dsize :initarg :download-size
-	  :reader get-download-size
+	  :accessor get-download-size
 	  :initform 0)
    (usize :initarg :upload-size
-	  :reader get-upload-size
+	  :accessor get-upload-size
 	  :initform 0)))
 
 (defun blog-db-log-report-get (&key (limit 60))
@@ -280,8 +283,6 @@
 		    (make-instance 'blog-db-log-report :mongo-doc x))
 		documents))))
 
-(blog-db-log-report-get)
-
 (defun blog-db-log-report-generate (log-path &key start-time end-time)
   (let ((report (make-instance 'blog-db-log-report
 			       :start-time (get-universal-time)
@@ -291,7 +292,19 @@
     (multiple-value-bind (tbl inv inv-str)
 	(hunchentoot-log-parse log-path nil nil)
       (hunchentoot-log-table-proc tbl 'blog-db-log-entry-new
-				  (blog-db/get-oid report)))))
+				  (blog-db/get-oid report)))
+    (with-blog-db-log-entries (var (blog-db/get-oid report))
+      (cond ((string= (get-http-method var) "POST")
+	     (format t "1111111111~%")
+	     (setf (get-upload-size report)
+		   (+ (get-upload-size report) (get-size var))))
+	    ((string= (get-http-method var) "GET")
+	     (format t "222222222~%")
+	     (setf (get-download-size report)
+		   (+ (get-download-size report) (get-size var)))))
+      (incf (get-total-hits report)))
+    (blog-db/generate-doc report)
+    (blog-db/save report)))
 
 ;;(blog-db-log-report-generate "~/tmp/access.log")
 
@@ -310,7 +323,8 @@
    (http-method :initarg :http-method
 		:reader get-http-method)
    (size :initarg :size
-	 :reader get-size)
+	 :reader get-size
+	 :initform 0)
    (timestamp :initarg :timestamp
 	      :reader get-timestamp)))
 
@@ -322,10 +336,24 @@
 		:report-id (cl-mongo::make-bson-oid :oid (car oid))
 		:addr addr :user-agent (elt x 5)
 		:url (cadr res) :http-code (elt x 2)
-		:http-method (car res) :size (elt x 3)
+		:http-method (car res)
+		;; In case size is "-"
+		:size (if (string/=  (elt x 3) "-") (parse-integer (elt x 3)) 0)
 		:timestamp (hunchentoot-log-time-to-unix (elt x 0))) do
        (blog-db/generate-doc obj)
        (blog-db/save obj)))
+
+(defmacro with-blog-db-log-entries ((var report-id) &body body)
+  (let ())
+  `(with-blog-db
+     (loop for doc in
+	  (docs (iter (db.find *db-log-entry-collection*
+			       ($ "REPORT-ID" (cl-mongo::make-bson-oid
+					       :oid ,report-id)) :limit 0)))
+	for ,var = (make-instance 'blog-db-log-entry :mongo-doc doc) do
+	  (describe doc)
+	  (describe ,var)
+	  ,@body)))
 
 (defclass blog-db-info (blog-db-base)
   ((collection :initform *db-blog-info-collection*)
