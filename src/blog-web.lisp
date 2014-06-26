@@ -348,17 +348,20 @@
       (:div :id "static-content"
 	    (:table
 	     (:tr
-	      (:th "Generated on") (:th "Start") (:th "End")
+	      (:th "Type") (:th "Generated on") (:th "Start") (:th "End")
 	      (:th "Total hits") (:th "Download") (:th "Upload"))
 	     (dolist (report (blog-db-log-report-get))
 	       (htm
 		(:tr
+		 (:td (fmt "~a" (get-access-type report)))
 		 (:td (fmt "~a" (format-time (get-gen-time report))))
 		 (:td (fmt "~a" (format-time (get-start-time report))))
 		 (:td (fmt "~a" (format-time (get-end-time report))))
 		 (:td (fmt "~a" (get-total-hits report)))
-		 (:td (fmt "~a" (get-download-size report)))
-		 (:td (fmt "~a" (get-upload-size report)))))))))))
+		 (:td (fmt "~,2fMB"
+			   (/ (get-download-size report) 1048576)))
+		 (:td (fmt "~,2fMB"
+			   (/ (get-upload-size report) 1048576)))))))))))
 
 (define-easy-handler (admin-edit-comments :uri "/admin/edit-comments") ()
   (with-authentication

@@ -272,7 +272,10 @@
 	  :initform 0)
    (usize :initarg :upload-size
 	  :accessor get-upload-size
-	  :initform 0)))
+	  :initform 0)
+   (access-type :initarg :access-type
+		:reader get-access-type
+		:initform "HTTP")))
 
 (defun blog-db-log-report-get (&key (limit 60))
   (with-blog-db
@@ -283,10 +286,12 @@
 		    (make-instance 'blog-db-log-report :mongo-doc x))
 		documents))))
 
-(defun blog-db-log-report-generate (log-path &key start-time end-time)
+(defun blog-db-log-report-generate (log-path access-type
+				    &key start-time end-time)
   (let ((report (make-instance 'blog-db-log-report
 			       :start-time (get-universal-time)
-			       :end-time (get-universal-time))))
+			       :end-time (get-universal-time)
+			       :access-type access-type)))
     (blog-db/generate-doc report)
     (blog-db/save report)
     (multiple-value-bind (tbl inv inv-str)
@@ -295,18 +300,16 @@
 				  (blog-db/get-oid report)))
     (with-blog-db-log-entries (var (blog-db/get-oid report))
       (cond ((string= (get-http-method var) "POST")
-	     (format t "1111111111~%")
 	     (setf (get-upload-size report)
 		   (+ (get-upload-size report) (get-size var))))
 	    ((string= (get-http-method var) "GET")
-	     (format t "222222222~%")
 	     (setf (get-download-size report)
 		   (+ (get-download-size report) (get-size var)))))
       (incf (get-total-hits report)))
     (blog-db/generate-doc report)
     (blog-db/save report)))
 
-;;(blog-db-log-report-generate "~/tmp/access.log")
+;;(blog-db-log-report-generate "~/tmp/ssl-access.log" "HTTPS")
 
 (defclass blog-db-log-entry (blog-db-base)
   ((collection :initform *db-log-entry-collection*)
