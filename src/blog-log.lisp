@@ -4,7 +4,7 @@
 
 (defvar *log-regex* "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}) - \\[([^\\]]+)\\] \"([^\\\"]+)\" (\\d+|-) (\\d+|-) \"([^\\\"]*)\" \"([^\\\"]*)\"")
 
-(defun hunchentoot-log-get-hash (fpath)
+(defun hunchentoot-log-parse (fpath start end)
   (let ((scanner (cl-ppcre::create-scanner *log-regex*))
 	(tbl (make-hash-table :test 'equal))
 	(inv 0) inv-str)
@@ -28,18 +28,24 @@
 (defun hunchentoot-log-hash-entry-what (entry)
   (filter-list (loop for x in entry collect (elt x 1)) '()))
 
-(defun hunchentoot-log-simple-parse (hash)
+(defun hunchentoot-log-table-proc (hash func &rest params)
   (loop for key being the hash-keys of hash using (hash-value value)
      for x = 0 then (1+ x) do
-       (progn
-	 (format t "IP: ~a; Hits: ~a: Client: ~a; What: ~a~%"
-		 key (length value)
-		 (hunchentoot-log-hash-entry-who value)
-		 (hunchentoot-log-hash-entry-what value)))
+       (funcall func key value params)
      finally (return x)))
 
-(multiple-value-bind (tbl inv inv-str)
-    (hunchentoot-log-get-hash "~/tmp/ssl-access.log")
-  (format t "Invalid entries=~a; Total number of unique visitors=~a~%"
-	  inv (hunchentoot-log-simple-parse tbl))
-  (format t "Invalid strings: ~a~%" inv-str))
+;; ;; (format t "IP: ~a; Hits: ~a: Client: ~a; What: ~a~%"
+;; ;; 	 key (length value)
+;; ;; 	 (hunchentoot-log-hash-entry-who value)
+;; ;; 	 (hunchentoot-log-hash-entry-what value))
+
+;; (multiple-value-bind (tbl inv inv-str)
+;;     (hunchentoot-log-parse "~/tmp/access.log" nil nil)
+;;   (hunchentoot-log-table-proc tbl #'(lambda (x y)
+;; 				      (format t "-------~%~a: ~a~%" x y))))
+
+;; (multiple-value-bind (tbl inv inv-str)
+;;     (hunchentoot-log-parse "~/tmp/ssl-access.log" nil nil)
+;;   (format t "Invalid entries=~a; Total number of unique visitors=~a~%"
+;; 	  inv (hunchentoot-log-table-parse tbl))
+;;   (format t "Invalid strings: ~a~%" inv-str))

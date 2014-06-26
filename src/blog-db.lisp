@@ -22,7 +22,9 @@
 (defvar *db-comment-collection*        "comments")
 (defvar *db-comment-author-collection* "authors")
 (defvar *db-post-tag-collection*       "tags")
-(defvar *db-blog-info-collection*      "blog-info")
+(defvar *db-blog-info-collection*      "bloginfo")
+(defvar *db-log-report-collection*     "logreport")
+(defvar *db-log-entry-collection*      "logentry")
 
 ;; Makes it possible to use mongo connections in multithreaded environment
 (defmacro with-blog-db (&body body)
@@ -251,21 +253,79 @@
   (setf (approved? obj) (not (approved? obj))))
 
 (defclass blog-db-log-report (blog-db-base)
-  ((start-time :initarg :start-time)
-   (end-time :initarg :end-time)
-   (gen-time :initarg :gen-time)
-   (hits :initarg :total-hits)
-   (dsize :initarg :download-size)
-   (usize :initarg :upload-size)))
+  ((collection :initform *db-log-report-collection*)
+   (start-time :initarg :start-time
+	       :reader get-start-time)
+   (end-time :initarg :end-time
+	     :reader get-end-time)
+   (gen-time :initarg :gen-time
+	     :reader get-gen-time
+	     :initform (get-universal-time))
+   (hits :initarg :total-hits
+	 :reader get-total-hits
+	 :initform 0)
+   (dsize :initarg :download-size
+	  :reader get-download-size
+	  :initform 0)
+   (usize :initarg :upload-size
+	  :reader get-upload-size
+	  :initform 0)))
+
+(defun blog-db-log-report-get (&key (limit 60))
+  (with-blog-db
+    (let ((documents
+	   (docs (db.sort *db-log-report-collection*
+			  :all :asc nil :field "GEN-TIME" :limit limit))))
+	(mapcar #'(lambda (x)
+		    (make-instance 'blog-db-log-report :mongo-doc x))
+		documents))))
+
+(blog-db-log-report-get)
+
+(defun blog-db-log-report-generate (log-path &key start-time end-time)
+  (let ((report (make-instance 'blog-db-log-report
+			       :start-time (get-universal-time)
+			       :end-time (get-universal-time))))
+    (blog-db/generate-doc report)
+    (blog-db/save report)
+    (multiple-value-bind (tbl inv inv-str)
+	(hunchentoot-log-parse log-path nil nil)
+      (hunchentoot-log-table-proc tbl 'blog-db-log-entry-new
+				  (blog-db/get-oid report)))))
+
+;;(blog-db-log-report-generate "~/tmp/access.log")
 
 (defclass blog-db-log-entry (blog-db-base)
-  ((report-id :initarg :report-id)
-   (address :initarg :address)
-   (user-agent :initarg :user-agent)
-   (url :initarg :url)
-   (http-code :initarg :http-code)
-   (size :initarg :size)
-   (timestamp :initarg :timestamp)))
+  ((collection :initform *db-log-entry-collection*)
+   (report-id :initarg :report-id
+	      :reader get-report-id)
+   (addr :initarg :addr
+	 :reader get-addr)
+   (user-agent :initarg :user-agent
+	       :reader get-user-agent)
+   (url :initarg :url
+	:reader get-url)
+   (http-code :initarg :http-code
+	      :reader get-http-code)
+   (http-method :initarg :http-method
+		:reader get-http-method)
+   (size :initarg :size
+	 :reader get-size)
+   (timestamp :initarg :timestamp
+	      :reader get-timestamp)))
+
+(defun blog-db-log-entry-new (addr val oid)
+  (loop for x in val
+     for res = (split-str (elt x 1) #\Space)
+     for obj = (make-instance
+		'blog-db-log-entry :addr addr
+		:report-id (cl-mongo::make-bson-oid :oid (car oid))
+		:addr addr :user-agent (elt x 5)
+		:url (cadr res) :http-code (elt x 2)
+		:http-method (car res) :size (elt x 3)
+		:timestamp (hunchentoot-log-time-to-unix (elt x 0))) do
+       (blog-db/generate-doc obj)
+       (blog-db/save obj)))
 
 (defclass blog-db-info (blog-db-base)
   ((collection :initform *db-blog-info-collection*)

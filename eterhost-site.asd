@@ -24,8 +24,8 @@
 			:serial t
 			:components ((:file "package")
 				     (:file "util")
-				     (:file "util-web")
 				     (:file "blog")
 				     (:file "blog-feed")
+				     (:file "blog-log")
 				     (:file "blog-db")
 				     (:file "blog-web")))))

@@ -2,6 +2,9 @@
 
 (in-package #:eterhost-site)
 
+(defvar *date-time-format* '((:year 4) #\- (:month 2) #\- (:day 2) #\Space
+			     (:hour 2) #\: (:min 2) #\Space :timezone))
+
 (defun string-replace (string part replacement &key (test #'char=))
   "Returns a new string in which all the occurences of the part
 is replaced with replacement."
@@ -133,3 +136,13 @@ is replaced with replacement."
 
 (defun tags-list-to-str (tags)
   (list-to-str tags ""))
+
+(defun format-time (time &key (zone local-time:+utc-zone+)
+			   (format *date-time-format*))
+  (local-time:format-timestring nil (local-time:universal-to-timestamp time)
+				:timezone zone :format format))
+
+(defun hunchentoot-log-time-to-unix (str)
+  (local-time:timestamp-to-unix
+   (local-time:parse-timestring
+    str :allow-missing-timezone-part t :date-time-separator #\Space)))

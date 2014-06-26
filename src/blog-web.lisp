@@ -4,9 +4,6 @@
 
 (defparameter *blog-posts-per-page* 0)
 
-;; Posts/comments date format
-(defvar *date-time-format* '((:year 4) #\- (:month 2) #\- (:day 2) #\Space
-			     (:hour 2) #\: (:min 2) #\Space :timezone))
 ;; Atom feed `updated' tag format
 (defvar *feed-time-format* '((:year 4) #\- (:month 2) #\- (:day 2)
 			     #\T (:hour 2) #\: (:min 2) #\: (:sec 2) #\Z))
@@ -97,11 +94,7 @@
 		 (fmt "~a"
 		      (concatenate
 		       'string "By \"" (comment-nick comment) "\" on "
-		       (local-time:format-timestring
-			nil (local-time:universal-to-timestamp
-			     (get-edit-time comment))
-			:timezone local-time:+utc-zone+
-			:format *date-time-format*))))
+		       (format-time (get-edit-time comment)))))
 		(when admin
 		  (htm
 		   (:h4
@@ -146,11 +139,7 @@
       (:div :class "post-menu"
 	    ;; edit time goes first
 	    (:b (fmt "Updated on ~a"
-		     (local-time:format-timestring
-		      nil (local-time:universal-to-timestamp
-			   (get-edit-time post))
-		      :timezone local-time:+utc-zone+
-		      :format *date-time-format*)))
+		     (format-time (get-edit-time post))))
 	    ;; If comments parameter is provided and comments are allowed for
 	    ;; the post, generate a link leading to comments section
 	    (when (and comments (comments-allowed? post))
@@ -173,7 +162,6 @@
 		 (cl-who:escape-string
 		  (format nil "/admin/edit-data?type=post&id=~a&act=del" id))
 		 (fmt "Delete")))))))))
-
 
 (define-easy-handler (tutorial2-javascript :uri "/eterhost.js") ()
   (setf (content-type*) "text/javascript")
@@ -360,11 +348,17 @@
       (:div :id "static-content"
 	    (:table
 	     (:tr
-	      (:th "Address")
-	      (:th "Hits"))
-	     (:tr
-	      (:td "127.0.0.1")
-	      (:td "1000")))))))
+	      (:th "Generated on") (:th "Start") (:th "End")
+	      (:th "Total hits") (:th "Download") (:th "Upload"))
+	     (dolist (report (blog-db-log-report-get))
+	       (htm
+		(:tr
+		 (:td (fmt "~a" (format-time (get-gen-time report))))
+		 (:td (fmt "~a" (format-time (get-start-time report))))
+		 (:td (fmt "~a" (format-time (get-end-time report))))
+		 (:td (fmt "~a" (get-total-hits report)))
+		 (:td (fmt "~a" (get-download-size report)))
+		 (:td (fmt "~a" (get-upload-size report)))))))))))
 
 (define-easy-handler (admin-edit-comments :uri "/admin/edit-comments") ()
   (with-authentication
@@ -546,11 +540,9 @@
   (let ((info (blog-db-info-get-recent)))
     (when info
       (with-atom-xml ("http://eterhost.org/feed"
-		      (local-time:format-timestring
-		       nil (local-time:universal-to-timestamp
-			    (get-feed-update-time (blog-db-info-get-recent)))
-		       :timezone local-time:+utc-zone+
-		       :format *feed-time-format*)
+		      (format-time (get-feed-update-time
+				    (blog-db-info-get-recent))
+				   :format *feed-time-format*)
 		     :title "Grepz Blog" :link-alt "http://eterhost.org"
 		     :subtitle "Grepz's internet hut."
 		     :id (get-feed-root-uuid info))
