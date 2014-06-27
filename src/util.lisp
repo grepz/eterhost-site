@@ -105,7 +105,7 @@ is replaced with replacement."
       (filter-list (remove-if #'(lambda (x)
 				  (string= (car src-lst) x)) src-lst)
 		   (cons (car src-lst) dst-lst))
-      (nreverse  dst-lst)))
+      (nreverse dst-lst)))
 
 (defun list-to-str (lst str)
   (declare (list lst)
