@@ -26,6 +26,6 @@
 				     (:file "util")
 				     (:file "blog")
 				     (:file "blog-feed")
-				     (:file "blog-log")
 				     (:file "blog-db")
+				     (:file "blog-log")
 				     (:file "blog-web")))))

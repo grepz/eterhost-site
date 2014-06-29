@@ -19,9 +19,6 @@
   (merge-pathnames
    (make-pathname :directory (append (pathname-directory root) (list sub)))))
 
-;;(setf hunchentoot:*catch-errors-p* t)
-;;(load "/home/grepz/Projects/eterhost-site/src/config.lisp")
-
 (defun blog-start (&key (debug nil) (http-port 80) (https-port 443)
 		     (loglevel :warning) docroot ssl-cert ssl-key ssl-key-passwd
 		     access-log ssl-access-log message-log ssl-message-log)
@@ -102,3 +99,6 @@
 	      :loglevel        *loglevel*)
   ;; Idle
   (loop while *eterhost-running* do (sleep 1)))
+
+;;(setf hunchentoot:*catch-errors-p* t)
+;;(load "/home/grepz/Projects/eterhost-site/src/config.lisp")

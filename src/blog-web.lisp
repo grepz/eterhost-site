@@ -348,11 +348,14 @@
       (:div :id "static-content"
 	    (:table
 	     (:tr
+	      (:th "Link")
 	      (:th "Type") (:th "Generated on") (:th "Start") (:th "End")
 	      (:th "Total hits") (:th "Download") (:th "Upload"))
 	     (dolist (report (blog-db-log-report-get))
 	       (htm
 		(:tr
+		 (:td (:a :href (format nil "/admin/statistic/report?id=~a"
+					(blog-db/id-to-str report)) "->"))
 		 (:td (fmt "~a" (get-access-type report)))
 		 (:td (fmt "~a" (format-time (get-gen-time report))))
 		 (:td (fmt "~a" (format-time (get-start-time report))))
@@ -362,6 +365,24 @@
 			   (/ (get-download-size report) 1048576)))
 		 (:td (fmt "~,2fMB"
 			   (/ (get-upload-size report) 1048576)))))))))))
+
+(define-easy-handler (admin-statstic-report :uri "/admin/statistic/report") ()
+  (with-authentication
+    (let ((id-param  (hunchentoot:get-parameter "id")) id)
+      (assert (not (zerop (length id-param))))
+      (setf id (id-str-to-oid id-param))
+      (blog-page (:title "EterHost.org - Admin" :name "EterHost.org - Admin")
+	(:a :href "/admin/statistic" "Back")
+	(:div :id "static-content"
+	      (:h1 "Links(hits)")
+	      (:table
+	       (:tr
+		(:th "link") (:th "Total hits")
+		(dolist (entry (blog-db-log-top-hits id-param))
+		  (htm
+		   (:tr
+		    (:td (fmt "~a" (car entry)))
+		    (:td (fmt "~a" (cadr entry)))))))))))))
 
 (define-easy-handler (admin-edit-comments :uri "/admin/edit-comments") ()
   (with-authentication
@@ -443,6 +464,7 @@
       ;; de-serialize DB data
       (setf data
 	    (cond ((string= data-type "post")
+		   ;; TODO: Do stuff using blog-db-get-by-id?
 		   (make-instance 'blog-db-post :mongo-doc
 				  (doc-find-by-oid *db-post-collection* id)))
 		  ((string= data-type "static")
@@ -514,8 +536,7 @@
 	(setf (get-tags data) (parse-tags tags)))
       ;; Render to html format
       (blog-db-data/render data)
-      (blog-db/generate-doc data)
-      (blog-db/save data)
+      (blog-db/generate-doc data :save t)
       ;; Update blog info + update feed `updated' tag
       (blog-db-info-update (blog-db-info-get-recent) :posts t)
       (redirect (format nil "/post?id=~a"
@@ -565,7 +586,6 @@
 ;;   "404 is here!")
 
 ;;(setf *dispatch-table* (nconc *dispatch-table* '(404-dispatcher)))
-
 
 (defmethod handle-request :before ((acc acceptor) (req request))
   ;; (hunchentoot:log-message*

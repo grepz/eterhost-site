@@ -50,6 +50,10 @@
   (with-blog-db
     (get-element "n" (car (docs (db.count collection :all))))))
 
+(defun blog-db-get-by-id (id class)
+  (let ((doc (doc-find-by-oid *db-post-collection* (id-str-to-oid id))))
+    (if doc (make-instance class :mongo-doc doc) nil)))
+
 (defclass blog-db-base ()
   ((db-doc :reader db-doc)
    (collection :reader db-collection
@@ -64,7 +68,9 @@
 			(get-element (symbol-name slot) mongo-doc))) slots)
       (setf (slot-value obj 'db-doc) mongo-doc))))
 
-(defmethod blog-db/generate-doc ((obj blog-db-base))
+(defgeneric blog-db/generate-doc (blog-db-base &key save))
+
+(defmethod blog-db/generate-doc ((obj blog-db-base) &key save)
   "Generate mongo doc for blog post"
   (let ((slots (cddr (mapcar #'(lambda (x) (sb-pcl:slot-definition-name x))
 			     (sb-pcl:class-slots (class-of obj)))))
@@ -73,7 +79,10 @@
     (mapcar #'(lambda (slot)
 		(add-element (symbol-name slot) (slot-value obj slot) doc))
 	    slots)
-    (setf (slot-value obj 'db-doc) doc)))
+    (setf (slot-value obj 'db-doc) doc)
+    (when save
+      (with-blog-db (db.save (db-collection obj) (slot-value obj 'db-doc))))
+    doc))
 
 (defmethod print-object ((obj blog-db-base) stream)
   (with-slots (collection) obj
@@ -88,14 +97,6 @@
   (with-blog-db
     (when (blog-db/have-doc obj)
       (db.delete (db-collection obj) (db-doc obj)))))
-
-(defgeneric blog-db/save (blog-db-base))
-
-(defmethod blog-db/save ((obj blog-db-base))
-  "Save blog data to DB if its mongo doc is generated"
-  (with-blog-db
-    (when (and (slot-boundp obj 'db-doc) (slot-value obj 'db-doc))
-      (db.save (db-collection obj) (slot-value obj 'db-doc)))))
 
 (defgeneric blog-db/have-doc (blog-db-base))
 
@@ -121,8 +122,6 @@
 (defmethod blog-db/id-to-str ((obj blog-db-base))
   "Convert mongo OID to a string representation"
   (id-oid-to-str (blog-db/get-oid obj)))
-
-(defgeneric blog-db/generate-doc (blog-db-base))
 
 (defgeneric blog-db/insert-doc (blog-db-base))
 
@@ -164,8 +163,7 @@
 		:hash (array-to-list (md5:md5sum-sequence
 				      (concatenate '(vector (unsigned-byte 8))
 						   tmphash salt))))))
-    (blog-db/generate-doc user)
-    (blog-db/save user)
+    (blog-db/generate-doc user :save t)
     user))
 
 (defun blog-db-get-user (user)
@@ -235,8 +233,7 @@
 
 (defmethod blog-db-comment/hide ((obj blog-db-comment) hide)
   (setf (hidden? obj) hide)
-  (blog-db/generate-doc obj)
-  (blog-db/save obj))
+  (blog-db/generate-doc obj :save t))
 
 (defmethod blog-db-comment/format ((obj blog-db-comment))
   "Prepare comment data to be shown to user."
@@ -255,105 +252,6 @@
   "Switch approved state for comment author"
   (setf (approved? obj) (not (approved? obj))))
 
-(defclass blog-db-log-report (blog-db-base)
-  ((collection :initform *db-log-report-collection*)
-   (start-time :initarg :start-time
-	       :reader get-start-time)
-   (end-time :initarg :end-time
-	     :reader get-end-time)
-   (gen-time :initarg :gen-time
-	     :reader get-gen-time
-	     :initform (get-universal-time))
-   (hits :initarg :total-hits
-	 :accessor get-total-hits
-	 :initform 0)
-   (dsize :initarg :download-size
-	  :accessor get-download-size
-	  :initform 0)
-   (usize :initarg :upload-size
-	  :accessor get-upload-size
-	  :initform 0)
-   (access-type :initarg :access-type
-		:reader get-access-type
-		:initform "HTTP")))
-
-(defun blog-db-log-report-get (&key (limit 60))
-  (with-blog-db
-    (let ((documents
-	   (docs (db.sort *db-log-report-collection*
-			  :all :asc nil :field "GEN-TIME" :limit limit))))
-	(mapcar #'(lambda (x)
-		    (make-instance 'blog-db-log-report :mongo-doc x))
-		documents))))
-
-(defun blog-db-log-report-generate (log-path access-type
-				    &key start-time end-time)
-  (let ((report (make-instance 'blog-db-log-report
-			       :start-time (get-universal-time)
-			       :end-time (get-universal-time)
-			       :access-type access-type)))
-    (blog-db/generate-doc report)
-    (blog-db/save report)
-    (multiple-value-bind (tbl inv inv-str)
-	(hunchentoot-log-parse log-path nil nil)
-      (hunchentoot-log-table-proc tbl 'blog-db-log-entry-new
-				  (blog-db/get-oid report)))
-    (with-blog-db-log-entries (var (blog-db/get-oid report))
-      (cond ((string= (get-http-method var) "POST")
-	     (setf (get-upload-size report)
-		   (+ (get-upload-size report) (get-size var))))
-	    ((string= (get-http-method var) "GET")
-	     (setf (get-download-size report)
-		   (+ (get-download-size report) (get-size var)))))
-      (incf (get-total-hits report)))
-    (blog-db/generate-doc report)
-    (blog-db/save report)))
-
-;;(blog-db-log-report-generate "~/tmp/ssl-access.log" "HTTPS")
-
-(defclass blog-db-log-entry (blog-db-base)
-  ((collection :initform *db-log-entry-collection*)
-   (report-id :initarg :report-id
-	      :reader get-report-id)
-   (addr :initarg :addr
-	 :reader get-addr)
-   (user-agent :initarg :user-agent
-	       :reader get-user-agent)
-   (url :initarg :url
-	:reader get-url)
-   (http-code :initarg :http-code
-	      :reader get-http-code)
-   (http-method :initarg :http-method
-		:reader get-http-method)
-   (size :initarg :size
-	 :reader get-size
-	 :initform 0)
-   (timestamp :initarg :timestamp
-	      :reader get-timestamp)))
-
-(defun blog-db-log-entry-new (addr val oid)
-  (loop for x in val
-     for res = (split-str (elt x 1) #\Space)
-     for obj = (make-instance
-		'blog-db-log-entry :addr addr
-		:report-id (cl-mongo::make-bson-oid :oid (car oid))
-		:addr addr :user-agent (elt x 5)
-		:url (cadr res) :http-code (elt x 2)
-		:http-method (car res)
-		;; In case size is "-"
-		:size (if (string/=  (elt x 3) "-") (parse-integer (elt x 3)) 0)
-		:timestamp (hunchentoot-log-time-to-unix (elt x 0))) do
-       (blog-db/generate-doc obj)
-       (blog-db/save obj)))
-
-(defmacro with-blog-db-log-entries ((var report-id) &body body)
-  `(with-blog-db
-     (loop for doc in
-	  (docs (iter (db.find *db-log-entry-collection*
-			       ($ "REPORT-ID" (cl-mongo::make-bson-oid
-					       :oid ,report-id)) :limit 0)))
-	for ,var = (make-instance 'blog-db-log-entry :mongo-doc doc) do
-	  ,@body)))
 
 (defclass blog-db-info (blog-db-base)
   ((collection :initform *db-blog-info-collection*)
@@ -384,8 +282,7 @@
       (setf comments-num (blog-db-count *db-comment-collection*)))
     (when (and update (or posts comments))
       (setf feed-update-time (get-universal-time))
-      (blog-db/generate-doc obj)
-      (blog-db/save obj))))
+      (blog-db/generate-doc obj :save t))))
 
 (defun blog-db-info-create-new (&key (old-uuid t) (old-update-time nil))
   (let* ((recent-info (blog-db-info-get-recent))
@@ -399,8 +296,7 @@
     (when old-update-time
       (setf (slot-value info 'feed-update-time)
 	    (get-feed-update-time recent-info)))
-    (blog-db/generate-doc info)
-    (blog-db/save info)))
+    (blog-db/generate-doc info :save t)))
 
 (defun blog-db-info-get-recent ()
   (with-blog-db
@@ -448,8 +344,7 @@
 (defun blog-db-add-static (link)
   "Add static data, `link' should be unique"
   (let ((static (make-instance 'blog-db-data :title link)))
-    (blog-db/generate-doc static)
-    (blog-db/save static)))
+    (blog-db/generate-doc static :save t)))
 
 ;;(blog-db-add-static "about")
 
@@ -473,8 +368,7 @@
 
 (defun blog-db-add-comment-author (email)
   (let ((author (make-instance 'blog-db-comment-author :email email)))
-    (blog-db/generate-doc author)
-    (blog-db/save author)
+    (blog-db/generate-doc author :save t)
     author))
 
 (defmacro blog-db-get-comments (&key post-id author-id)
@@ -513,20 +407,17 @@
 				:post (cl-mongo::make-bson-oid :oid post-id)
 				:nick nick :data comment :ip ip
 				:hidden (not approved))))
-    (blog-db/generate-doc comment)
-    (blog-db/save comment)
+    (blog-db/generate-doc comment :save t)
     comment))
 
 (defun blog-db-change-approved-status (author)
   (blog-db-comment-author/author-approved-switch author)
-  (blog-db/generate-doc author)
-  (blog-db/save author))
+  (blog-db/generate-doc author :save t))
 
 (defun update-fill-create-time ()
   (dolist (post (blog-db-get-posts 0))
     (setf (slot-value post 'create-time) (get-edit-time post))
-    (blog-db/generate-doc post)
-    (blog-db/save post)))
+    (blog-db/generate-doc post :save t)))
 
 
 (defun update-fill-comment-ip (ip)
@@ -536,8 +427,7 @@
 		  (let ((comment (make-instance 'blog-db-comment
 						:mongo-doc x)))
 		    (setf (slot-value comment 'ip) ip)
-		    (blog-db/generate-doc comment)
-		    (blog-db/save comment)))
+		    (blog-db/generate-doc comment :save t)))
 	      documents))))
 
 ;; (time
