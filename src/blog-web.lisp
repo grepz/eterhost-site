@@ -126,7 +126,8 @@
       (:h1
        ;; If title-link is set, then generate a link leading to a post
        (if title-link
-	   (htm (:a :href (format nil "post?id=~a" id)
+	   (htm (:a :href (format nil "post/~a/~a"
+				  id (url-encode (get-title post)))
 		    (fmt "~a" (get-title post))))
 	   (fmt "~a" (get-title post))))
       ;; Show post html content
@@ -144,7 +145,8 @@
 	    ;; the post, generate a link leading to comments section
 	    (when (and comments (comments-allowed? post))
 	      (htm (:div :class "link-comment"
-			 (:a :href (format nil "post?id=~a#comments" id)
+			 (:a :href (format nil "post/~a/~a#comments"
+					   id (url-encode (get-title post)))
 			     (fmt "~a"
 				  (blog-db-get-comments-num
 				   (blog-db/get-oid post)))))))
@@ -222,14 +224,17 @@
 	       post :admin (hunchentoot:session-value :auth)
 	       :title-link t :comments t))))))))
 
-(define-easy-handler (post :uri "/post") ()
-  (let ((id-param (hunchentoot:get-parameter "id")) doc data id)
-    ;; Check if ID parameter was supplied
-    (when (null id-param)
-      (redirect "/"))
-    (setf id (id-str-to-oid id-param)
-	  doc (doc-find-by-oid *db-post-collection* id))
-    ;; If no doc found, return to the root
+(defun page-handler-post ()
+  (let (id-str id doc data)
+    (multiple-value-bind (str vec)
+	(cl-ppcre:scan-to-strings
+	 "^post/([A-Z0-9]{24})/.+$" (namestring (hunchentoot:request-pathname)))
+      (when (null str)
+	(redirect "/"))
+      (setf id-str (aref vec 0)
+	    id (id-str-to-oid id-str)
+	    doc (doc-find-by-oid *db-post-collection* id)))
+    ;; XXX: Redirect to 404?
     (when (null doc)
       (redirect "/"))
     (setf data (make-instance 'blog-db-post :mongo-doc doc))
@@ -257,7 +262,10 @@
 				    (:textarea :id "content" :name "comment"))
 			    (:input :type :submit :value "Submit")
 			    (:input :type :hidden :id "content"
-				    :value id-param :name "comment_post_id"))
+				    :value id-str :name "comment_post_id")
+			    (:input :type :hidden :id "content"
+				    :value (url-encode (get-title data))
+				    :name "comment_post_title"))
 		     (:h2 "Comments:")
 		     (:div :id "comments" (:a :name "comments")
 		      (dolist (comment (blog-db-get-comments :post-id id))
@@ -268,11 +276,12 @@
 			    :admin (hunchentoot:session-value :auth)))))))))))))
 
 (define-easy-handler (comment :uri "/comment") ()
-  (let* ((email   (post-parameter "email"))
-	 (nick    (post-parameter "nick"))
-	 (comment (post-parameter "comment"))
-	 (post-id (post-parameter "comment_post_id"))
-	 (addr    (hunchentoot:remote-addr*))
+  (let* ((email      (post-parameter "email"))
+	 (nick       (post-parameter "nick"))
+	 (comment    (post-parameter "comment"))
+	 (post-id    (post-parameter "comment_post_id"))
+	 (post-title (post-parameter "comment_post_title"))
+	 (addr       (hunchentoot:remote-addr*))
 	 author)
     (assert (or (string/=  post-id "")
 		(not (comment-data-invalid? comment email nick))))
@@ -284,7 +293,7 @@
      (id-str-to-oid post-id) (blog-db/get-oid author) addr (approved? author))
     ;; Update blog info information without updating feed `updated' tag
     (blog-db-info-update (blog-db-info-get-recent) :comments t :update nil)
-    (redirect (format nil "/post?id=~a" post-id))))
+    (redirect (format nil "/post/~a/~a" post-id post-title))))
 
 (define-easy-handler (login :uri "/login" :default-request-type :post)
     ((username :parameter-type 'string)
@@ -346,9 +355,11 @@
   (with-authentication
     (blog-page (:title "EterHost.org - Admin" :name "EterHost.org - Admin")
       (:div :id "static-content"
+	    (:a :href "/admin" "Back")
+	    (:h1 "Reports:")
 	    (:table
 	     (:tr
-	      (:th "Link")
+	      (:th "More") (:th "Del")
 	      (:th "Type") (:th "Generated on") (:th "Start") (:th "End")
 	      (:th "Total hits") (:th "Download") (:th "Upload"))
 	     (dolist (report (blog-db-log-report-get))
@@ -356,6 +367,8 @@
 		(:tr
 		 (:td (:a :href (format nil "/admin/statistic/report?id=~a"
 					(blog-db/id-to-str report)) "->"))
+		 (:td (:a :href (format nil "/admin/statistic/report?id=~a"
+					(blog-db/id-to-str report)) "x"))
 		 (:td (fmt "~a" (get-access-type report)))
 		 (:td (fmt "~a" (format-time (get-gen-time report))))
 		 (:td (fmt "~a" (format-time (get-start-time report))))
@@ -372,8 +385,8 @@
       (assert (not (zerop (length id-param))))
       (setf id (id-str-to-oid id-param))
       (blog-page (:title "EterHost.org - Admin" :name "EterHost.org - Admin")
-	(:a :href "/admin/statistic" "Back")
 	(:div :id "static-content"
+	      (:a :href "/admin/statistic" "Back")
 	      (:h1 "Links(hits)")
 	      (:table
 	       (:tr
@@ -539,8 +552,9 @@
       (blog-db/generate-doc data :save t)
       ;; Update blog info + update feed `updated' tag
       (blog-db-info-update (blog-db-info-get-recent) :posts t)
-      (redirect (format nil "/post?id=~a"
-			(id-oid-to-str (blog-db/get-oid data)))))))
+      (redirect (format nil "/post/~a/~a"
+			(id-oid-to-str (blog-db/get-oid data))
+			(url-encode (get-title data)))))))
 
 (define-easy-handler (projects :uri "/projects") ()
   (blog-page
@@ -576,7 +590,8 @@
 		     :title (get-title post)
 		     :id (get-feed-uuid post)
 		     :entry-link (blog-post-gen-link
-				  *blog-hostname* (blog-db/id-to-str post))
+				  *blog-hostname* (blog-db/id-to-str post)
+				  (url-encode (get-title post)))
 		     :updated (get-edit-time post))))))))
 
 ;; (defun 404-dispatcher (request)

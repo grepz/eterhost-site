@@ -3,8 +3,9 @@
 (in-package #:eterhost-site)
 
 (defvar *resource-uri* '("^/img/" "^/css/" "^/eterhost.js" ))
-(defvar *client-bots* '("YandexBlogs" "bingbot" "Googlebot" "NerdyBot"
-			"ApacheBench" "ZmEu" "Morfeus Fucking Scanner"))
+(defvar *client-bots* '("YandexBlogs" "YandexBot" "bingbot" "Googlebot" "ZmEu"
+			"NerdyBot" "Yahoo!" "Mail.Ru bot" "Baiduspider"
+			"Feedly" "ApacheBench" "Morfeus Fucking Scanner"))
 
 (defvar *log-regex* "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}) - \\[([^\\]]+)\\] \"([^\\\"]+)\" (\\d+|-) (\\d+|-) \"([^\\\"]*)\" \"([^\\\"]*)\"")
 

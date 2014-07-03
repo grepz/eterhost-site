@@ -126,8 +126,8 @@ is replaced with replacement."
        (redirect "/login")
        (progn ,@body)))
 
-(defun blog-post-gen-link (host uid)
-  (concatenate 'string "http://" host "/post?id=" uid))
+(defun blog-post-gen-link (host uid title)
+  (concatenate 'string "http://" host "/post/" uid "/" title))
 
 (defun parse-tags (input)
   (mapcar #'(lambda (x)

@@ -54,6 +54,11 @@
 	 :error-template-directory (make-dir *docroot* "www/errors")
 	 :access-log-destination ssl-access-log
 	 :message-log-destination ssl-message-log))
+  ;; Handling semantic urls by creating regex dispatcher for posts
+  (setq hunchentoot:*dispatch-table*
+	(list 'hunchentoot:dispatch-easy-handlers
+	      (hunchentoot:create-regex-dispatcher
+	       "^/post/[A-Z0-9]{24}/.+$" 'page-handler-post)))
   (blog-db-start)
   (hunchentoot:start *hunchentoot-listener*)
   (hunchentoot:start *hunchentoot-ssl-listener*))
@@ -100,5 +105,5 @@
   ;; Idle
   (loop while *eterhost-running* do (sleep 1)))
 
-;;(setf hunchentoot:*catch-errors-p* t)
+;;(setf hunchentoot:*catch-errors-p* nil)
 ;;(load "/home/grepz/Projects/eterhost-site/src/config.lisp")
