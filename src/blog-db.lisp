@@ -26,6 +26,12 @@
 (defvar *db-log-report-collection*     "logreport")
 (defvar *db-log-entry-collection*      "logentry")
 
+(defun doc-id-short (doc)
+  "Fix for the cl-mongo way of handling OID's, when object isn't saved to DB
+  its OID is actually UUID and is 16 bytes long, not 12 as it should.
+  TODO: Patch cl-mongo properly to address this issue."
+  (cl-mongo::_id (cl-mongo::_id doc)))
+
 ;; Makes it possible to use mongo connections in multithreaded environment
 (defmacro with-blog-db (&body body)
   `(let ((cl-mongo::*mongo-registry* nil))
@@ -107,7 +113,7 @@
 (defmethod blog-db/get-oid ((obj blog-db-base))
   "Get mongo document OID"
   (when (blog-db/have-doc obj)
-    (doc-id (slot-value obj 'db-doc))))
+    (doc-id-short (slot-value obj 'db-doc))))
 
 (defmethod blog-db/get-bson-oid ((obj blog-db-base))
   (cl-mongo::make-bson-oid :oid (blog-db/get-oid obj)))
@@ -176,9 +182,11 @@
 
 (defclass blog-db-data (blog-db-base)
   ((collection :initform *db-static-collection*)
-   (title :accessor get-title
-	  :initarg :title
-	  :initform "")
+   (title-src :accessor get-title-src
+	      :initarg :title-src
+	      :initform "")
+   (title-url :accessor get-title-url
+	      :initform "")
    (text-src :accessor get-text-src
 	     :initarg :text-src
 	     :initform "")
@@ -193,8 +201,14 @@
 
 (defgeneric blog-db-data/render (blog-db-base))
 
-(defmethod blog-db-data/render ((obj blog-db-base))
-  (setf (get-text-html obj) (render-html (get-text-src obj))))
+(defgeneric blog-db-data/url-convert (blog-db-data))
+
+(defmethod blog-db-data/url-convert ((obj blog-db-data))
+  ())
+
+(defmethod blog-db-data/render ((obj blog-db-data))
+  (setf (get-text-html obj) (render-html (get-text-src obj))
+	(get-title-url obj) (hunchentoot:url-encode (get-title-src obj))))
 
 (defclass blog-db-post (blog-db-data)
   ((collection :initform *db-post-collection*)
@@ -429,6 +443,26 @@
 		    (setf (slot-value comment 'ip) ip)
 		    (blog-db/generate-doc comment :save t)))
 	      documents))))
+
+(defun upgrade-entries-for-title ()
+  (with-blog-db
+    (let ((all-docs (docs (db.find *db-post-collection* :all :limit 0))))
+      (mapcar #'(lambda (x)
+		  (let ((post (make-instance 'blog-db-post
+					     :mongo-doc x)))
+		    (when (or (null (get-title-src post))
+			      (string= (get-title-url post) ""))
+		      (setf
+		       (get-title-src post) (get-element "TITLE" x)
+		       (get-title-url post) (hunchentoot:url-encode
+					     (get-title-src post))))
+		    (print (get-element "TITLE" x))
+		    (print (get-title-url post))
+		    (blog-db/generate-doc post :save t)))
+	      all-docs))))
+
+
+(upgrade-entries-for-title)
 
 ;; (time
 ;;  (with-blog-db

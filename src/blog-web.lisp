@@ -127,9 +127,10 @@
        ;; If title-link is set, then generate a link leading to a post
        (if title-link
 	   (htm (:a :href (format nil "post/~a/~a"
-				  id (url-encode (get-title post)))
-		    (fmt "~a" (get-title post))))
-	   (fmt "~a" (get-title post))))
+				  id (get-title-url post))
+		    (fmt "~a" (hunchentoot:escape-for-html
+			       (get-title-src post)))))
+	   (fmt "~a" (hunchentoot:escape-for-html (get-title-src post)))))
       ;; Show post html content
       (:div :class "post-content"
 	    (fmt "~a" (get-text-html post)))
@@ -146,7 +147,7 @@
 	    (when (and comments (comments-allowed? post))
 	      (htm (:div :class "link-comment"
 			 (:a :href (format nil "post/~a/~a#comments"
-					   id (url-encode (get-title post)))
+					   id (get-title-url post))
 			     (fmt "~a"
 				  (blog-db-get-comments-num
 				   (blog-db/get-oid post)))))))
@@ -228,18 +229,22 @@
   (let (id-str id doc data)
     (multiple-value-bind (str vec)
 	(cl-ppcre:scan-to-strings
-	 "^post/([A-Z0-9]{24})/.+$" (namestring (hunchentoot:request-pathname)))
+	 "^post/([A-Z0-9]{24})/(.+)$"
+	 (namestring (hunchentoot:request-pathname)))
       (when (null str)
 	(redirect "/"))
       (setf id-str (aref vec 0)
 	    id (id-str-to-oid id-str)
-	    doc (doc-find-by-oid *db-post-collection* id)))
-    ;; XXX: Redirect to 404?
-    (when (null doc)
-      (redirect "/"))
-    (setf data (make-instance 'blog-db-post :mongo-doc doc))
+	    doc (doc-find-by-oid *db-post-collection* id))
+      ;; XXX: Redirect to 404?
+      (when (null doc)
+	(redirect "/"))
+      (setf data (make-instance 'blog-db-post :mongo-doc doc))
+      (when (string/= (get-title-src data) (aref vec 1))
+	(redirect "/")))
     (blog-page
-	(:title (concatenate 'string "EterHost.org - " (get-title data))
+	(:title (concatenate 'string "EterHost.org - "
+			     (hunchentoot:escape-for-html (get-title-src data)))
 		:name "EterHost.org - Blog")
       (:div :class "data-column"
 	    (:div :id "content"
@@ -264,7 +269,7 @@
 			    (:input :type :hidden :id "content"
 				    :value id-str :name "comment_post_id")
 			    (:input :type :hidden :id "content"
-				    :value (url-encode (get-title data))
+				    :value (get-title-url data)
 				    :name "comment_post_title"))
 		     (:h2 "Comments:")
 		     (:div :id "comments" (:a :name "comments")
@@ -459,7 +464,8 @@
 	    (:a :href (cl-who:escape-string
 		       (format nil "/admin/edit-data?id=~a&act=edit&type=static"
 			       (blog-db/id-to-str data)))
-		(fmt "~a" (get-title data)))))))
+		(fmt "~a" (hunchentoot:escape-for-html
+			   (get-title-src data))))))))
        (:br)
        (:a :href "/admin" "Return")))))
 
@@ -503,7 +509,7 @@
 				    (:input :id "title"
 					    :type "text"
 					    :name "title"
-					    :value (get-title data)))
+					    :value (get-title-src data)))
 			    (:label (:span "Content")
 				    (:textarea :id "content"
 					       :name "content"
@@ -536,13 +542,14 @@
 
 (define-easy-handler (edit-check :uri "/admin/edit-data-submit") ()
   (with-authentication
-    (let ((title (post-parameter "title"))
-	  (text-src (remove #\Linefeed (post-parameter "content")))
-	  (tags (post-parameter "tags"))
-	  (action (hunchentoot:get-parameter "data_submit"))
-	  (data (hunchentoot:session-value :dataref)))
+    (let ((title-src (post-parameter "title"))
+	  (text-src  (remove #\Linefeed (post-parameter "content")))
+	  (tags      (post-parameter "tags"))
+	  (action    (hunchentoot:get-parameter "data_submit"))
+	  (data      (hunchentoot:session-value :dataref)))
       (assert data)
-      (setf (get-title data)     title
+      ;; TODO: check title for invalid characters
+      (setf (get-title-src data) title-src
 	    (get-text-src data)  text-src
 	    (get-edit-time data) (get-universal-time))
       (when (/= (length tags) 0)
@@ -554,7 +561,42 @@
       (blog-db-info-update (blog-db-info-get-recent) :posts t)
       (redirect (format nil "/post/~a/~a"
 			(id-oid-to-str (blog-db/get-oid data))
-			(url-encode (get-title data)))))))
+			(get-title-url data))))))
+
+;; (cl-mongo::make-elements 40)
+;; (doc-id (make-document))
+;; (type-of (make-document))
+;; (cl-mongo::_id (cl-mongo::_id (make-document)))
+;; (doc-id-short (db-doc (car (blog-db-get-posts 0))))
+;; (cl-mongo::make-bson-oid)
+
+;; (doc-id-short (db-doc (car (blog-db-get-posts 0))))
+;; (doc-id (db-doc (car (blog-db-get-posts 0))))
+;; (doc-id (make-document))
+;; (doc-id (make-document))
+;; (doc-id (db-doc (car (blog-db-get-posts 0))))
+
+;; (gethash "_id" (cl-mongo::elements (make-document)))
+;; (gethash "_id" (cl-mongo::elements (db-doc (car (blog-db-get-posts 0)))))
+
+;; (loop for key being the hash-keys of (cl-mongo::elements (db-doc (car (blog-db-get-posts 0))))
+;;    using (hash-value value do
+;; 		  (format t "~a:~a~%" key value)))
+
+;; ;; 1.
+;; (setq test (make-document))
+;; ;; 2.
+;; (doc-id test)
+;; ;; 3.
+;; (db.save "test" test)
+;; ;; 4.
+;; (doc-id (car (docs (db.find "test" :all))))
+
+;; ;;
+;; (cl-mongo::bson-encode-container (kv "_id" (cl-mongo::_id test)))
+;; (cl-mongo::bson-encode-container test)
+
+;; (cl-mongo::add-octets (cl-mongo::_id (cl-mongo::_id test)) (cl-mongo::make-octet-vector 100))
 
 (define-easy-handler (projects :uri "/projects") ()
   (blog-page
@@ -587,11 +629,12 @@
 	(dolist (post (blog-db-get-posts 10))
 	  (fmt "~a" (atom-xml-entry
 		     (hunchentoot:escape-for-html (get-text-html post))
-		     :title (get-title post)
+		     ;; XXX: Shall I use html escaped title here or url encoded?
+		     :title (hunchentoot:escape-for-html (get-title-src post))
 		     :id (get-feed-uuid post)
 		     :entry-link (blog-post-gen-link
 				  *blog-hostname* (blog-db/id-to-str post)
-				  (url-encode (get-title post)))
+				  (get-title-url post))
 		     :updated (get-edit-time post))))))))
 
 ;; (defun 404-dispatcher (request)
