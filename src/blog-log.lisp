@@ -148,7 +148,7 @@
 	 'string "Post ID: " (elt vec 0) "; ("
 	 (let ((post (blog-db-get-by-id (elt vec 0) 'blog-db-post)))
 	   (if post
-	       (get-title post)
+	       (get-title-url post)
 	       "Not found")) ")")
 	(concatenate 'string "Unknown post query: " query))))
 
