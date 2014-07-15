@@ -462,7 +462,8 @@
 	      all-docs))))
 
 
-(upgrade-entries-for-title)
+;;(upgrade-entries-for-title)
+
 
 ;; (time
 ;;  (with-blog-db

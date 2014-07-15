@@ -166,7 +166,7 @@
 		  (format nil "/admin/edit-data?type=post&id=~a&act=del" id))
 		 (fmt "Delete")))))))))
 
-(define-easy-handler (tutorial2-javascript :uri "/eterhost.js") ()
+(define-easy-handler (javascript :uri "/eterhost.js") ()
   (setf (content-type*) "text/javascript")
   (ps
     (defun greeting-callback ()
@@ -188,10 +188,10 @@
 	  (alert "Important fields are empty.")
 	  (return-from comment-submit-check false))
 	(return-from comment-submit-check true)))
-    (defun post-preview (form)
-      (form.set-attribute "target" "_blank"))
-    (defun post-submit (form)
-      (form.remove-attribute "target"))
+    ;; (defun post-preview (form)
+    ;;   (form.set-attribute "target" "_blank"))
+    ;; (defun post-submit (form)
+    ;;   (form.remove-attribute "target"))
     ;; (defun disqus-fun ()
     ;;   (let ((dsq (document.create-element "script")))
     ;; 	(setf dsq.type "text/javascript"
@@ -524,12 +524,10 @@
 					:name "tags"
 					:value (blog-db-post/tags-str data)))))
 			    (:input :type :submit :name "data_submit"
-				    :onclick (ps
-					       (post-submit this.form))
+;;				    :onclick (ps (post-submit this.form))
 				    :value "Submit")
 			    (:input :type :submit :name "data_submit"
-				    :onclick (ps
-					       (post-preview this.form))
+;;				    :onclick (ps (post-preview this.form))
 				    :value "Check")))))
 	    ((string= act-type "del")
 	     ;; Delete comments that belong to post
