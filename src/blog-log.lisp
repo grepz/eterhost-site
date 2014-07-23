@@ -7,6 +7,9 @@
 			"NerdyBot" "Yahoo!" "Mail.Ru bot" "Baiduspider"
 			"Feedly" "ApacheBench" "Morfeus Fucking Scanner"))
 
+(defvar *db-log-report-collection* "logreport")
+(defvar *db-log-entry-collection*  "logentry")
+
 (defvar *log-regex* "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}) - \\[([^\\]]+)\\] \"([^\\\"]+)\" (\\d+|-) (\\d+|-) \"([^\\\"]*)\" \"([^\\\"]*)\"")
 
 (defclass blog-db-log-report (blog-db-base)
@@ -51,6 +54,11 @@
    (timestamp :initarg :timestamp
 	      :reader get-timestamp)))
 
+(defmethod blog-db-log-report/name ((obj blog-db-log-report))
+  (format-time  (get-gen-time obj)
+		:format '((:year 4) #\- (:month 2) #\- (:day 2) #\/
+			  (:hour 2) #\: (:min 2))))
+
 (defmethod http-code-ok ((obj blog-db-log-entry))
   (string= (get-http-code obj) "200"))
 
@@ -77,6 +85,15 @@
 					       :oid ,report-id)) :limit 0)))
 	for ,var = (make-instance 'blog-db-log-entry :mongo-doc doc) do
 	  ,@body)))
+
+(defun blog-db-log-report-delete (oid)
+  (with-blog-db
+    (let ((report (blog-db/get-obj
+		   oid *db-log-report-collection* 'blog-db-log-report)))
+      (when report
+	(with-blog-db-log-entries (var oid)
+	  (blog-db/delete var))
+	(blog-db/delete report)))))
 
 (defun blog-db-log-report-get (&key (limit 60))
   (with-blog-db
@@ -148,7 +165,7 @@
 	 'string "Post ID: " (elt vec 0) "; ("
 	 (let ((post (blog-db-get-by-id (elt vec 0) 'blog-db-post)))
 	   (if post
-	       (get-title-url post)
+	       (hunchentoot:escape-for-html (get-title-src post))
 	       "Not found")) ")")
 	(concatenate 'string "Unknown post query: " query))))
 
@@ -163,9 +180,10 @@
   (let ((tbl (make-hash-table :test 'equal))
 	(oid (id-str-to-oid report-id)))
     (with-blog-db-log-entries (var oid)
-      (when (and (http-code-ok var) (stat-significant-uri var)
+      (when (and (http-code-ok var)
+		 (stat-significant-uri var)
 		 (entry-not-bot var))
-	(multiple-value-bind (uri query) (strip-uri (get-url var))
+	(multiple-value-bind (uri query) (strip-url-params (get-url var))
 	  (cond ((string= uri "/post")
 		 (incf (gethash (stat-get-post-name query) tbl 0)))
 		((string= uri "/tag")
@@ -195,6 +213,7 @@
 		:timestamp (hunchentoot-log-time-to-unix (elt x 0))) do
        (blog-db/generate-doc obj :save t)))
 
-;; (loop for x from 0 to 100 do
-;;      (time (blog-db-log-report-generate "~/tmp/access.log" "HTTP"))
+;; (loop for x from 0 to 10 do
+;;      (time (blog-db-log-report-generate
+;; 	    "/tmp/eterhost-site-access.log" "HTTP"))
 ;;      (format t "--> ~a~%" x))

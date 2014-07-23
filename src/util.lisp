@@ -147,7 +147,7 @@ is replaced with replacement."
    (local-time:parse-timestring
     str :allow-missing-timezone-part t :date-time-separator #\Space)))
 
-(defun strip-uri (uri)
+(defun strip-url-params (uri)
   (let ((start (position #\? uri)))
     (if start
 	(values (subseq uri 0 start) (subseq uri start)) (values uri nil))))

@@ -364,31 +364,36 @@
 	    (:h1 "Reports:")
 	    (:table
 	     (:tr
-	      (:th "More") (:th "Del")
-	      (:th "Type") (:th "Generated on") (:th "Start") (:th "End")
-	      (:th "Total hits") (:th "Download") (:th "Upload"))
+	      (:th "Report")
+	      (:th "Type") (:th "Start") (:th "End")
+	      (:th "Hits") (:th "Down") (:th "Up")
+	      (:th "Del"))
 	     (dolist (report (blog-db-log-report-get))
 	       (htm
 		(:tr
 		 (:td (:a :href (format nil "/admin/statistic/report?id=~a"
-					(blog-db/id-to-str report)) "->"))
-		 (:td (:a :href (format nil "/admin/statistic/report?id=~a"
-					(blog-db/id-to-str report)) "x"))
+					(blog-db/id-to-str report))
+			  (fmt "~a" (blog-db-log-report/name report))))
 		 (:td (fmt "~a" (get-access-type report)))
-		 (:td (fmt "~a" (format-time (get-gen-time report))))
 		 (:td (fmt "~a" (format-time (get-start-time report))))
 		 (:td (fmt "~a" (format-time (get-end-time report))))
 		 (:td (fmt "~a" (get-total-hits report)))
 		 (:td (fmt "~,2fMB"
 			   (/ (get-download-size report) 1048576)))
 		 (:td (fmt "~,2fMB"
-			   (/ (get-upload-size report) 1048576)))))))))))
+			   (/ (get-upload-size report) 1048576)))
+		 (:td (:a :href
+			  (format nil "/admin/statistic/report?id=~a&del=1"
+				  (blog-db/id-to-str report)) "x"))))))))))
 
 (define-easy-handler (admin-statstic-report :uri "/admin/statistic/report") ()
   (with-authentication
-    (let ((id-param  (hunchentoot:get-parameter "id")) id)
+    (let ((id-param  (hunchentoot:get-parameter "id"))
+	  (del       (hunchentoot:get-parameter "del")))
       (assert (not (zerop (length id-param))))
-      (setf id (id-str-to-oid id-param))
+      (when del
+	(blog-db-log-report-delete (id-str-to-oid id-param))
+	(redirect "/admin/statistic"))
       (blog-page (:title "EterHost.org - Admin" :name "EterHost.org - Admin")
 	(:div :id "static-content"
 	      (:a :href "/admin/statistic" "Back")

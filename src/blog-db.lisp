@@ -23,8 +23,6 @@
 (defvar *db-comment-author-collection* "authors")
 (defvar *db-post-tag-collection*       "tags")
 (defvar *db-blog-info-collection*      "bloginfo")
-(defvar *db-log-report-collection*     "logreport")
-(defvar *db-log-entry-collection*      "logentry")
 
 (defun doc-id-short (doc)
   "Fix for the cl-mongo way of handling OID's, when object isn't saved to DB
@@ -59,6 +57,12 @@
 (defun blog-db-get-by-id (id class)
   (let ((doc (doc-find-by-oid *db-post-collection* (id-str-to-oid id))))
     (if doc (make-instance class :mongo-doc doc) nil)))
+
+(defun blog-db/get-obj (oid collection class)
+  "Get CLOS object using OID"
+  (let ((doc (doc-find-by-oid collection oid)))
+    (when doc
+      (make-instance class :mongo-doc doc))))
 
 (defclass blog-db-base ()
   ((db-doc :reader db-doc)
