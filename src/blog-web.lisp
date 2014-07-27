@@ -3,6 +3,7 @@
 (in-package #:eterhost-site)
 
 (defparameter *blog-posts-per-page* 0)
+(defparameter *web-log-report-per-page* 50)
 
 ;; Atom feed `updated' tag format
 (defvar *feed-time-format* '((:year 4) #\- (:month 2) #\- (:day 2)
@@ -165,6 +166,32 @@
 		 (cl-who:escape-string
 		  (format nil "/admin/edit-data?type=post&id=~a&act=del" id))
 		 (fmt "Delete")))))))))
+
+(defun page-navigation (cur total base-link)
+  ;; When cur is nil, assume it is first page
+  (when (null cur)
+    (setq cur 1))
+  (with-html ()
+     ;; Show link to the first page if we are further then 2 pages away
+     (when (> cur 2)
+       (htm (:a :href (concatenate 'string base-link "?pg=1")
+		"First")))
+     ;; If we have previous pages, show 'previous' link
+     (when (> cur 1)
+       (htm (:a :href (concatenate 'string base-link
+				   (format nil "?pg=~a" (1- cur)))
+		"Previous")))
+     ;; Show link to the next page if there are more pages ahead
+     (when (< cur total)
+       (htm (:a :href (concatenate 'string base-link
+				   (format nil "?pg=~a" (1+ cur)))
+		"Next")))
+     ;; Show link to the last page if there are more then 1 pages and we can't
+     ;; access last page by using 'next' link
+     (when (and (>= total 2) (<= cur (- total 2)))
+       (htm (:a :href (concatenate 'string base-link
+				   (format nil "?pg=~a" total))
+		"Last")))))
 
 (define-easy-handler (javascript :uri "/eterhost.js") ()
   (setf (content-type*) "text/javascript")
@@ -358,33 +385,43 @@
 
 (define-easy-handler (admin-statistic :uri "/admin/statistic") ()
   (with-authentication
-    (blog-page (:title "EterHost.org - Admin" :name "EterHost.org - Admin")
-      (:div :id "static-content"
-	    (:a :href "/admin" "Back")
-	    (:h1 "Reports:")
-	    (:table
-	     (:tr
-	      (:th "Report")
-	      (:th "Type") (:th "Start") (:th "End")
-	      (:th "Hits") (:th "Down") (:th "Up")
-	      (:th "Del"))
-	     (dolist (report (blog-db-log-report-get))
-	       (htm
-		(:tr
-		 (:td (:a :href (format nil "/admin/statistic/report?id=~a"
-					(blog-db/id-to-str report))
-			  (fmt "~a" (blog-db-log-report/name report))))
-		 (:td (fmt "~a" (get-access-type report)))
-		 (:td (fmt "~a" (format-time (get-start-time report))))
-		 (:td (fmt "~a" (format-time (get-end-time report))))
-		 (:td (fmt "~a" (get-total-hits report)))
-		 (:td (fmt "~,2fMB"
-			   (/ (get-download-size report) 1048576)))
-		 (:td (fmt "~,2fMB"
-			   (/ (get-upload-size report) 1048576)))
-		 (:td (:a :href
-			  (format nil "/admin/statistic/report?id=~a&del=1"
-				  (blog-db/id-to-str report)) "x"))))))))))
+    (let* ((page-param (hunchentoot:get-parameter "pg"))
+	   (page (if page-param (parse-integer page-param :junk-allowed t) 0))
+	   (last-page (ceiling (/ (blog-db-count
+				   *db-log-report-collection*)
+				  *web-log-report-per-page*)))
+	   (reports (blog-db-log-report-get
+		     (if (< page 0) 0 (if (> page 0) (1- page) page))
+		     :limit *web-log-report-per-page*)))
+      (blog-page (:title "EterHost.org - Admin" :name "EterHost.org - Admin")
+	(:div :id "static-content"
+	      (:a :href "/admin" "Back")
+	      (:h1 "Reports:")
+	      (:table
+	       (:tr
+		(:th "Report")
+		(:th "Type") (:th "Start") (:th "End")
+		(:th "Hits") (:th "Down") (:th "Up")
+		(:th "Del"))
+	       (dolist (report reports)
+		 (htm
+		  (:tr
+		   (:td (:a :href (format nil "/admin/statistic/report?id=~a"
+					  (blog-db/id-to-str report))
+			    (fmt "~a" (blog-db-log-report/name report))))
+		   (:td (fmt "~a" (get-access-type report)))
+		   (:td (fmt "~a" (format-time (get-start-time report))))
+		   (:td (fmt "~a" (format-time (get-end-time report))))
+		   (:td (fmt "~a" (get-total-hits report)))
+		   (:td (fmt "~,2fMB"
+			     (/ (get-download-size report) 1048576)))
+		   (:td (fmt "~,2fMB"
+			     (/ (get-upload-size report) 1048576)))
+		   (:td (:a :href
+			    (format nil "/admin/statistic/report?id=~a&del=1"
+				    (blog-db/id-to-str report)) "x"))))))
+	      (fmt "~a" (page-navigation
+			 page last-page "/admin/statistic")))))))
 
 (define-easy-handler (admin-statstic-report :uri "/admin/statistic/report") ()
   (with-authentication
@@ -639,14 +676,6 @@
 				  *blog-hostname* (blog-db/id-to-str post)
 				  (get-title-url post))
 		     :updated (get-edit-time post))))))))
-
-;; (defun 404-dispatcher (request)
-;;   '404-page)
-
-;; (defun 404-page ()
-;;   "404 is here!")
-
-;;(setf *dispatch-table* (nconc *dispatch-table* '(404-dispatcher)))
 
 (defmethod handle-request :before ((acc acceptor) (req request))
   ;; (hunchentoot:log-message*

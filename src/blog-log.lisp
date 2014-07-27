@@ -95,11 +95,12 @@
 	  (blog-db/delete var))
 	(blog-db/delete report)))))
 
-(defun blog-db-log-report-get (&key (limit 60))
+(defun blog-db-log-report-get (off &key (limit 10))
   (with-blog-db
     (let ((documents
 	   (docs (db.sort *db-log-report-collection*
-			  :all :asc nil :field "GEN-TIME" :limit limit))))
+			  :all :asc nil :field "GEN-TIME"
+			  :limit limit :skip (* off limit)))))
 	(mapcar #'(lambda (x)
 		    (make-instance 'blog-db-log-report :mongo-doc x))
 		documents))))
@@ -213,7 +214,7 @@
 		:timestamp (hunchentoot-log-time-to-unix (elt x 0))) do
        (blog-db/generate-doc obj :save t)))
 
-;; (loop for x from 0 to 10 do
-;;      (time (blog-db-log-report-generate
-;; 	    "/tmp/eterhost-site-access.log" "HTTP"))
-;;      (format t "--> ~a~%" x))
+#+nil(loop for x from 0 to 314 do
+	  (time (blog-db-log-report-generate
+		 "/tmp/eterhost-site-access.log" "HTTP"))
+	  (format t "--> ~a~%" x))

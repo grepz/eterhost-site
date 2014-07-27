@@ -52,7 +52,7 @@
 
 (defun blog-db-count (collection)
   (with-blog-db
-    (get-element "n" (car (docs (db.count collection :all))))))
+    (round (get-element "n" (car (docs (db.count collection :all)))))))
 
 (defun blog-db-get-by-id (id class)
   (let ((doc (doc-find-by-oid *db-post-collection* (id-str-to-oid id))))
