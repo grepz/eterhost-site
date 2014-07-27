@@ -2,7 +2,8 @@
 
 (in-package #:eterhost-site)
 
-(defparameter *blog-posts-per-page* 0)
+(defparameter *blog-posts-per-page* 15
+  "Show that much posts per blog page, if zero - unlimited")
 (defparameter *web-log-report-per-page* 50)
 
 ;; Atom feed `updated' tag format
@@ -169,7 +170,7 @@
 
 (defun page-navigation (cur total base-link)
   ;; When cur is nil, assume it is first page
-  (when (null cur)
+  (when (or (null cur) (zerop cur))
     (setq cur 1))
   (with-html ()
      ;; Show link to the first page if we are further then 2 pages away
@@ -230,15 +231,23 @@
     ))
 
 (define-easy-handler (blog-posts :uri "/") ()
+  (let* ((page-param (hunchentoot:get-parameter "pg"))
+	 (page (if page-param (parse-integer page-param :junk-allowed t) 0))
+	 (last-page (ceiling (/ (blog-db-count
+				 *db-post-collection*)
+				*blog-posts-per-page*))))
   (blog-page
       (:title "EterHost.org" :name "EterHost.org - Blog")
       (:div :class "data-column"
        (:div :id "content"
-	(dolist (post (blog-db-get-posts *blog-posts-per-page*))
+	(dolist (post (blog-db-get-posts
+		       (if (< page 0) 0 (if (> page 0) (1- page) page))
+		       *blog-posts-per-page*))
 	 (fmt "~a"
 	      (htmlize-blog-post
 	       post :admin (hunchentoot:session-value :auth)
-	       :title-link t :comments t)))))))
+	       :title-link t :comments t)))))
+      (fmt "~a" (page-navigation page last-page "/")))))
 
 (define-easy-handler (blog-posts-tag :uri "/tag") ()
   (let ((tag (hunchentoot:get-parameter "tag")))
@@ -246,11 +255,11 @@
 	(:title "EterHost.org - Tag" :name "EterHost.org - Blog")
       (:div :class "data-column"
        (:div :id "content"
-	(dolist (post (blog-db-get-posts-by-tag *blog-posts-per-page* tag))
-	 (fmt "~a"
-	      (htmlize-blog-post
-	       post :admin (hunchentoot:session-value :auth)
-	       :title-link t :comments t))))))))
+	(dolist (post (blog-db-get-posts-by-tag 0 0 tag))
+	  (fmt "~a"
+	       (htmlize-blog-post
+		post :admin (hunchentoot:session-value :auth)
+		:title-link t :comments t))))))))
 
 (defun page-handler-post ()
   (let (id-str id doc data)
@@ -666,7 +675,7 @@
 		     :title "Grepz Blog" :link-alt "http://eterhost.org"
 		     :subtitle "Grepz's internet hut."
 		     :id (get-feed-root-uuid info))
-	(dolist (post (blog-db-get-posts 10))
+	(dolist (post (blog-db-get-posts 0 10))
 	  (fmt "~a" (atom-xml-entry
 		     (hunchentoot:escape-for-html (get-text-html post))
 		     ;; XXX: Shall I use html escaped title here or url encoded?

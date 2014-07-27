@@ -332,21 +332,25 @@
 	   :accessor post-tag-weight
 	   :initform 0)))
 
-(defun blog-db-get-posts (limit)
+(defun blog-db-get-posts (off limit)
   "Get `limit' most recent posts from DB"
   (declare (fixnum limit)
+	   (fixnum off)
 	   (optimize (speed 3) (safety 0)))
   (with-blog-db
       (let ((documents
 	     (docs (db.sort *db-post-collection*
-			    :all :asc nil :field "CREATE-TIME" :limit limit))))
+			    :all :asc nil :field "CREATE-TIME"
+			    :limit limit
+			    :skip (* off limit)))))
 	(the list (mapcar #'(lambda (x)
 			      (make-instance 'blog-db-post :mongo-doc x))
 			  documents)))))
 
-(defun blog-db-get-posts-by-tag (limit tag)
+(defun blog-db-get-posts-by-tag (off limit tag)
   "Get `limit' most recent posts from DB"
   (declare (fixnum limit)
+	   (fixnum off)
 	   (simple-string tag)
 	   (optimize (speed 3) (safety 0)))
   (with-blog-db
@@ -354,7 +358,9 @@
 	   (docs (db.sort *db-post-collection*
 			  (if (= (length tag) 0)
 			      :all ($all "TAGS" (list tag)))
-			  :asc nil :field "CREATE-TIME" :limit limit))))
+			  :asc nil :field "CREATE-TIME"
+			  :limit limit
+			  :skip (* off limit)))))
       (the list (mapcar #'(lambda (x)
 			    (make-instance 'blog-db-post :mongo-doc x))
 			documents)))))
