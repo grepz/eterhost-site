@@ -2,7 +2,7 @@
 
 (in-package #:eterhost-site)
 
-(defparameter *blog-posts-per-page* 15
+(defparameter *blog-posts-per-page* 3
   "Show that much posts per blog page, if zero - unlimited")
 (defparameter *web-log-report-per-page* 50)
 
@@ -63,7 +63,7 @@
 		(:div :class "navigation"
 		      (fmt "~a" (blog-navigation *blog-nav-list* " ")))))))
 
-(defmacro blog-page ((&key title name) &body body)
+(defmacro blog-page ((&key title name page-nav) &body body)
   "Generic blog web page macro."
   `(with-html (:prologue t)
 	(:html :xmlns "http://www.w3.org/1999/xhtml"
@@ -83,7 +83,11 @@
 	       (:body
 		(fmt "~a" (blog-header ,name))
 		(:div :class "main"
-		      ,@body)
+		      ,@body
+		      (when ,page-nav
+			(fmt "~a" (page-navigation
+				   (first ,page-nav) (second ,page-nav)
+				   (third ,page-nav)))))
 		(:div :class "separater")
 		(fmt "~a" (blog-footer))))))
 
@@ -237,7 +241,8 @@
 				 *db-post-collection*)
 				*blog-posts-per-page*))))
   (blog-page
-      (:title "EterHost.org" :name "EterHost.org - Blog")
+      (:title "EterHost.org" :name "EterHost.org - Blog"
+       :page-nav (list page last-page "/"))
       (:div :class "data-column"
        (:div :id "content"
 	(dolist (post (blog-db-get-posts
@@ -246,8 +251,7 @@
 	 (fmt "~a"
 	      (htmlize-blog-post
 	       post :admin (hunchentoot:session-value :auth)
-	       :title-link t :comments t)))))
-      (fmt "~a" (page-navigation page last-page "/")))))
+	       :title-link t :comments t))))))))
 
 (define-easy-handler (blog-posts-tag :uri "/tag") ()
   (let ((tag (hunchentoot:get-parameter "tag")))
@@ -402,7 +406,8 @@
 	   (reports (blog-db-log-report-get
 		     (if (< page 0) 0 (if (> page 0) (1- page) page))
 		     :limit *web-log-report-per-page*)))
-      (blog-page (:title "EterHost.org - Admin" :name "EterHost.org - Admin")
+      (blog-page (:title "EterHost.org - Admin" :name "EterHost.org - Admin"
+		  :page-nav (list page last-page "/admin/statistic"))
 	(:div :id "static-content"
 	      (:a :href "/admin" "Back")
 	      (:h1 "Reports:")
@@ -428,9 +433,7 @@
 			     (/ (get-upload-size report) 1048576)))
 		   (:td (:a :href
 			    (format nil "/admin/statistic/report?id=~a&del=1"
-				    (blog-db/id-to-str report)) "x"))))))
-	      (fmt "~a" (page-navigation
-			 page last-page "/admin/statistic")))))))
+				    (blog-db/id-to-str report)) "x")))))))))))
 
 (define-easy-handler (admin-statstic-report :uri "/admin/statistic/report") ()
   (with-authentication
