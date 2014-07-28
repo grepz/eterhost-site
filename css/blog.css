@@ -362,6 +362,17 @@ a:hover {
 	white-space: pre;
 }
 
+#page-nav {
+    text-align: center;
+    /* Top and bottom margins for div container */
+    margin: 20px 0px 20px 0px
+}
+
+#page-nav a {
+    /* Spacing between links (right) */
+    margin: 0 5px;
+}
+
 #comments {
     border-radius: 10px;
     padding: 5px;

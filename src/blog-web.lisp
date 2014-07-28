@@ -2,7 +2,7 @@
 
 (in-package #:eterhost-site)
 
-(defparameter *blog-posts-per-page* 3
+(defparameter *blog-posts-per-page* 15
   "Show that much posts per blog page, if zero - unlimited")
 (defparameter *web-log-report-per-page* 50)
 
@@ -177,26 +177,27 @@
   (when (or (null cur) (zerop cur))
     (setq cur 1))
   (with-html ()
-     ;; Show link to the first page if we are further then 2 pages away
-     (when (> cur 2)
-       (htm (:a :href (concatenate 'string base-link "?pg=1")
-		"First")))
-     ;; If we have previous pages, show 'previous' link
-     (when (> cur 1)
-       (htm (:a :href (concatenate 'string base-link
-				   (format nil "?pg=~a" (1- cur)))
-		"Previous")))
-     ;; Show link to the next page if there are more pages ahead
-     (when (< cur total)
-       (htm (:a :href (concatenate 'string base-link
-				   (format nil "?pg=~a" (1+ cur)))
-		"Next")))
-     ;; Show link to the last page if there are more then 1 pages and we can't
-     ;; access last page by using 'next' link
-     (when (and (>= total 2) (<= cur (- total 2)))
-       (htm (:a :href (concatenate 'string base-link
-				   (format nil "?pg=~a" total))
-		"Last")))))
+    (:div :id "page-nav"
+	  ;; Show link to the first page if we are further then 2 pages away
+	  (when (> cur 2)
+	    (htm (:a :href (concatenate 'string base-link "?pg=1")
+		     "First")))
+	  ;; If we have previous pages, show 'previous' link
+	  (when (> cur 1)
+	    (htm (:a :href (concatenate 'string base-link
+					(format nil "?pg=~a" (1- cur)))
+		     "Previous")))
+	  ;; Show link to the next page if there are more pages ahead
+	  (when (< cur total)
+	    (htm (:a :href (concatenate 'string base-link
+					(format nil "?pg=~a" (1+ cur)))
+		     "Next")))
+	  ;; Show link to the last page if there are more then 1 pages and we
+	  ;; can't access last page by using 'next' link
+	  (when (and (>= total 2) (<= cur (- total 2)))
+	    (htm (:a :href (concatenate 'string base-link
+					(format nil "?pg=~a" total))
+		     "Last"))))))
 
 (define-easy-handler (javascript :uri "/eterhost.js") ()
   (setf (content-type*) "text/javascript")
